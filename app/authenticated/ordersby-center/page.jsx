@@ -114,54 +114,57 @@ const OrdersByCenterPage = () => {
     <div className="min-h-screen bg-slate-50">
       <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Sidebar: Centers List */}
-        <div className="col-span-1 bg-white border border-slate-200 rounded-lg p-4">
-          <h2 className="text-sm font-semibold text-slate-900 mb-3 flex items-center">
-            <HiBuildingOffice className="w-4 h-4 mr-2 text-slate-600" />
-            Centers ({centres.length})
-          </h2>
-          <div className="mb-4">
-            <div className="relative">
-              <span className="absolute inset-y-0 left-0 pl-3 flex items-center">
-                <HiMagnifyingGlass className="h-4 w-4 text-slate-400" />
-              </span>
-              <input
-                type="text"
-                placeholder="Search centers..."
-                value={centerSearch}
-                onChange={(e) => setCenterSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50 focus:ring-2 focus:ring-teal-500"
-              />
-            </div>
-          </div>
+<div className="col-span-1 max-w-sm bg-white border border-slate-200 rounded-lg p-4">
+  <h2 className="text-sm font-semibold text-slate-900 mb-3 flex items-center">
+    <HiBuildingOffice className="w-4 h-4 mr-2 text-slate-600" />
+    Centers ({centres.length})
+  </h2>
+  <div className="mb-4">
+    <div className="relative">
+      <span className="absolute inset-y-0 left-0 pl-3 flex items-center">
+        <HiMagnifyingGlass className="h-4 w-4 text-slate-400" />
+      </span>
+      <input
+        type="text"
+        placeholder="Search centers..."
+        value={centerSearch}
+        onChange={(e) => setCenterSearch(e.target.value)}
+        className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50 focus:ring-2 focus:ring-teal-500"
+      />
+    </div>
+  </div>
 
-          {loading ? (
-            <p className="text-sm text-slate-500">Loading centers...</p>
-          ) : (
-            <div className="space-y-3 max-h-[70vh] overflow-y-auto">
-              {filteredCentres.map((centre) => (
-                <div
-                  key={centre._id}
-                  onClick={() => handleCentreClick(centre)}
-                  className={`cursor-pointer p-3 rounded-lg border ${selectedCentre?._id === centre._id ? 'border-teal-500 bg-teal-50' : 'border-slate-200'} hover:border-teal-400`}
-                >
-                  <p className="text-sm font-medium text-slate-900">
-                    {highlightSearchTerm(centre.name, centerSearch)}
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    ID: {highlightSearchTerm(centre.centreId, centerSearch)}
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    {centre.regionId?.name}
-                    {centre.branchId?.name && ` • ${centre.branchId.name}`}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
+  {loading ? (
+    <p className="text-sm text-slate-500">Loading centers...</p>
+  ) : (
+    <div className="space-y-3 max-h-[70vh] overflow-y-auto">
+      {filteredCentres.map((centre) => (
+        <div
+          key={centre._id}
+          onClick={() => handleCentreClick(centre)}
+          className={`cursor-pointer p-3 rounded-lg border ${
+            selectedCentre?._id === centre._id
+              ? 'border-teal-500 bg-teal-50'
+              : 'border-slate-200'
+          } hover:border-teal-400`}
+        >
+          <p className="text-sm font-medium text-slate-900">
+            {highlightSearchTerm(centre.name, centerSearch)}
+          </p>
+          <p className="text-xs text-slate-500">
+            ID: {highlightSearchTerm(centre.centreId, centerSearch)}
+          </p>
+          <p className="text-xs text-slate-500">
+            {centre.regionId?.name}
+            {centre.branchId?.name && ` • ${centre.branchId.name}`}
+          </p>
         </div>
-
+      ))}
+    </div>
+  )}
+</div>
         {/* Right Panel: Orders */}
-        <div className="col-span-2 bg-white border border-slate-200 rounded-lg p-6">
+        <div className="col-span-2 bg-white border text-black border-slate-200 rounded-lg p-6">
           {selectedCentre ? (
             <>
               <h3 className="text-lg font-semibold mb-2">
