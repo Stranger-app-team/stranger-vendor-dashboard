@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { ChevronLeft, Edit } from "lucide-react";
 
 export default function OrderDetailsPage() {
   const [orderData, setOrderData] = useState(null);
@@ -134,64 +133,6 @@ export default function OrderDetailsPage() {
                 Current Status: {orderData.status}
               </span>
 
-              {/* Action Buttons for Draft Orders */}
-              {orderData.status === 'Draft' && (
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={() => handleStatusChange('Accepted')}
-                    className="px-4 py-1 rounded-full bg-green-50 text-green-700 font-semibold text-xs shadow-sm border border-green-200 hover:bg-green-100 transition-colors"
-                    style={{ minWidth: 80 }}
-                  >
-                    Accept
-                  </button>
-                  <button
-                    onClick={() => handleStatusChange('Declined')}
-                    className="px-4 py-1 rounded-full bg-red-50 text-red-600 font-semibold text-xs shadow-sm border border-red-200 hover:bg-red-100 transition-colors"
-                    style={{ minWidth: 80 }}
-                  >
-                    Reject
-                  </button>
-                  <button
-                    onClick={() => handleStatusChange('On Hold')}
-                    className="px-4 py-1 rounded-full bg-orange-50 text-orange-600 font-semibold text-xs shadow-sm border border-orange-200 hover:bg-orange-100 transition-colors"
-                    style={{ minWidth: 80 }}
-                  >
-                    Hold
-                  </button>
-                  <button
-                    onClick={handleEdit}
-                    className="px-3 py-1.5 bg-teal-600 text-white rounded-md hover:bg-teal-700 transition-colors text-xs font-semibold shadow-sm border border-teal-200"
-                  >
-                    Edit
-                  </button>
-                </div>
-              )}
-
-              {/* Action Buttons for On Hold Orders */}
-              {orderData.status === 'On Hold' && (
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={() => handleStatusChange('Accepted')}
-                    className="px-4 py-1 rounded-full bg-green-50 text-green-700 font-semibold text-xs shadow-sm border border-green-200 hover:bg-green-100 transition-colors"
-                    style={{ minWidth: 80 }}
-                  >
-                    Accept
-                  </button>
-                  <button
-                    onClick={() => handleStatusChange('Declined')}
-                    className="px-4 py-1 rounded-full bg-red-50 text-red-600 font-semibold text-xs shadow-sm border border-red-200 hover:bg-red-100 transition-colors"
-                    style={{ minWidth: 80 }}
-                  >
-                    Reject
-                  </button>
-                  <button
-                    onClick={handleEdit}
-                    className="px-3 py-1.5 bg-teal-600 text-white rounded-md hover:bg-teal-700 transition-colors text-xs font-semibold shadow-sm border border-teal-200"
-                  >
-                    Edit
-                  </button>
-                </div>
-              )}
 
               {/* Edit Button for Accepted Orders */}
               {orderData.status === 'Accepted' && (

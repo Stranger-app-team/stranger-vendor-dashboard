@@ -204,7 +204,7 @@ export default function OrderEditPage() {
   );
 
   return (
-    <div className="min-h-screen py-6 bg-gray-50">
+    <div className="min-h-screen py-6 bg-gray-50 text-gray-600">
       <div className="max-w-7xl mx-auto px-3">
         {/* Compact Header */}
         <div className="mb-3">
