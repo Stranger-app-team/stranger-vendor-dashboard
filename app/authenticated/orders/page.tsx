@@ -22,7 +22,7 @@ const statusBgColors: Record<string, string> = {
   Delivered: 'bg-emerald-100',
 };
 
-const FILTER_STATUSES = ['On Hold', 'Declined', 'Processing', 'Accepted', 'Out for Delivery', 'Delivered'];
+const FILTER_STATUSES = ['Processing', 'Accepted', 'Out for Delivery', 'Delivered'];
 
 interface Centre {
   name: string;
@@ -102,7 +102,7 @@ export default function OrderPage() {
     fetchStatusCounts();
   }, []);
 
-  const handleAcceptOrder = async (orderId: string) => {
+  const handleStatusUpdate = async (orderId: string, newStatus: string) => {
     setUpdatingOrderId(orderId);
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${orderId}/status`, {
@@ -110,33 +110,40 @@ export default function OrderPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ status: 'Out for Delivery' }),
+        body: JSON.stringify({ status: newStatus }),
       });
 
       if (res.ok) {
         setOrders(prevOrders =>
           prevOrders.map(order =>
-            order._id === orderId ? { ...order, status: 'Out for Delivery' } : order
+            order._id === orderId ? { ...order, status: newStatus } : order
           )
         );
         fetchStatusCounts(); // Refresh count
-        console.log('Order accepted successfully');
+        console.log(`Order status updated to ${newStatus} successfully`);
       } else {
-        console.error('Failed to accept order');
+        console.error(`Failed to update order status to ${newStatus}`);
       }
     } catch (err) {
-      console.error('Error accepting order:', err);
+      console.error(`Error updating order status to ${newStatus}:`, err);
     } finally {
       setUpdatingOrderId(null);
     }
   };
 
+  const handleAcceptOrder = async (orderId: string) => {
+    await handleStatusUpdate(orderId, 'Out for Delivery');
+  };
+
+  const handleDeliverOrder = async (orderId: string) => {
+    await handleStatusUpdate(orderId, 'Delivered');
+  };
 
   const router = useRouter();
 
-const handleEdit = (orderId: string) => {
-  router.push(`/authenticated/edit-orders/${orderId}`);
-};
+  const handleEdit = (orderId: string) => {
+    router.push(`/authenticated/edit-orders/${orderId}`);
+  };
 
   return (
     <div className="flex flex-col gap-4 justify-center py-10 px-2 sm:px-6">
@@ -247,14 +254,26 @@ const handleEdit = (orderId: string) => {
                           >
                           Edit
                           </button>
-                          {order.status !== 'Processing' && (
-                          <button
-                            onClick={() => handleAcceptOrder(order._id)}
-                            disabled={updatingOrderId === order._id}
-                            className="text-green-600 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {updatingOrderId === order._id ? 'Accepting...' : 'Accept'}
-                          </button>
+                          {order.status !== 'Processing' && order.status !== 'Delivered' && (
+                            <>
+                              {selectedStatus === 'Out for Delivery' && order.status === 'Out for Delivery' ? (
+                                <button
+                                  onClick={() => handleDeliverOrder(order._id)}
+                                  disabled={updatingOrderId === order._id}
+                                  className="text-emerald-600 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  {updatingOrderId === order._id ? 'Delivering...' : 'Delivered'}
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleAcceptOrder(order._id)}
+                                  disabled={updatingOrderId === order._id}
+                                  className="text-green-600 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  {updatingOrderId === order._id ? 'Accepting...' : 'Accept'}
+                                </button>
+                              )}
+                            </>
                           )}
                         </td>
                       </tr>
