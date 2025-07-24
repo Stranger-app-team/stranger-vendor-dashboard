@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-
 const statusTextColors: Record<string, string> = {
   Processing: 'text-blue-600',
   'On Hold': 'text-orange-600',
@@ -22,7 +21,7 @@ const statusBgColors: Record<string, string> = {
   Delivered: 'bg-emerald-100',
 };
 
-const FILTER_STATUSES = ['Processing', 'Accepted', 'Out for Delivery', 'Delivered'];
+const FILTER_STATUSES = ['Accepted', 'Out for Delivery', 'Delivered'];
 
 interface Centre {
   name: string;
@@ -49,6 +48,12 @@ interface Order {
 interface StatusCounts {
   [key: string]: number;
 }
+
+// Helper function to change display name
+const getDisplayStatus = (status: string): string => {
+  if (status === 'Accepted') return 'Receive Order';
+  return status;
+};
 
 export default function OrderPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -119,7 +124,7 @@ export default function OrderPage() {
             order._id === orderId ? { ...order, status: newStatus } : order
           )
         );
-        fetchStatusCounts(); // Refresh count
+        fetchStatusCounts();
         console.log(`Order status updated to ${newStatus} successfully`);
       } else {
         console.error(`Failed to update order status to ${newStatus}`);
@@ -149,23 +154,25 @@ export default function OrderPage() {
     <div className="flex flex-col gap-4 justify-center py-10 px-2 sm:px-6">
       <div className="w-full max-w-7xl mx-auto">
 
-<div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-4 mb-6">
-  {FILTER_STATUSES.map((status) => (
-    <div
-      key={status}
-      onClick={() => {
-        setSelectedStatus(status);
-        setActiveStatusCard(status);
-      }}
-      className={`cursor-pointer rounded-lg border border-gray-600/20 p-2 text-sm text-center shadow-sm transition bg-transparent w-full sm:w-[200px]`}
-    >
-      <div className={`font-semibold ${statusTextColors[status] || ''}`}>{status}</div>
-      <div className="text-xs text-gray-500">
-        {`${statusCounts[status] ?? 0} Orders`}
-      </div>
-    </div>
-  ))}
-</div>
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-4 mb-6">
+          {FILTER_STATUSES.map((status) => (
+            <div
+              key={status}
+              onClick={() => {
+                setSelectedStatus(status);
+                setActiveStatusCard(status);
+              }}
+              className={`cursor-pointer rounded-lg border border-gray-600/20 p-2 text-sm text-center shadow-sm transition bg-transparent w-full sm:w-[200px]`}
+            >
+              <div className={`font-semibold ${statusTextColors[status] || ''}`}>
+                {getDisplayStatus(status)}
+              </div>
+              <div className="text-xs text-gray-500">
+                {`${statusCounts[status] ?? 0} Orders`}
+              </div>
+            </div>
+          ))}
+        </div>
 
         {/* Order Table Box */}
         <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
@@ -234,7 +241,7 @@ export default function OrderPage() {
                               statusBgColors[order.status] || 'bg-gray-100'
                             } ${statusTextColors[order.status] || 'text-gray-600'}`}
                           >
-                            {order.status === 'Accepted' ? 'Received' : order.status}
+                            {getDisplayStatus(order.status)}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
@@ -243,16 +250,16 @@ export default function OrderPage() {
                         </td>
                         <td className="px-4 py-3 space-x-2 text-sm whitespace-nowrap">
                           <button
-                          className="text-amber-950 hover:underline"
-                          onClick={() => router.push(`/authenticated/view-orders/${order._id}`)}
+                            className="text-amber-950 hover:underline"
+                            onClick={() => router.push(`/authenticated/view-orders/${order._id}`)}
                           >
-                          View
+                            View
                           </button>
                           <button
-                          onClick={() => handleEdit(order._id)}
-                          className="text-blue-400 hover:underline"
+                            onClick={() => handleEdit(order._id)}
+                            className="text-blue-400 hover:underline"
                           >
-                          Edit
+                            Edit
                           </button>
                           {order.status !== 'Processing' && order.status !== 'Delivered' && (
                             <>
@@ -262,7 +269,7 @@ export default function OrderPage() {
                                   disabled={updatingOrderId === order._id}
                                   className="text-emerald-600 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                  {updatingOrderId === order._id ? 'Delivering...' : 'Delivered'}
+                                  {updatingOrderId === order._id ? 'Delivering...' : 'Mark as Delivered'}
                                 </button>
                               ) : (
                                 <button
