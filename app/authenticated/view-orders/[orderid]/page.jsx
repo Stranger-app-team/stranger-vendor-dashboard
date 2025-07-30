@@ -48,10 +48,6 @@ export default function OrderDetailsPage() {
     window.location.href = `/authenticated/edit-orders/${orderId}`;
   };
 
-  const handleStatusChange = (newStatus) => {
-    // Handle status change logic here
-    console.log(`Changing status to: ${newStatus}`);
-  };
 
   const getOrderTotal = () => {
     if (!orderData?.products) return 0;
@@ -77,7 +73,7 @@ const generateReceiptHTML = () => {
     <html>
     <head>
         <meta charset="utf-8">
-        <title>Order Receipt - ${orderData._id?.slice(-8) || orderId}</title>
+        <title>Order Receipt - ${orderData.orderNo || 'N/A'}</title>
         <style>
             body { 
                 font-family: Arial, sans-serif; 
@@ -90,10 +86,11 @@ const generateReceiptHTML = () => {
                 margin: 0 auto; 
                 padding: 30px; 
                 border-radius: 8px; 
-            
             }
             .header { 
-                text-align: center; 
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
                 border-bottom: 2px solid #059669; 
                 padding-bottom: 20px; 
                 margin-bottom: 20px; 
@@ -108,6 +105,12 @@ const generateReceiptHTML = () => {
                 font-size: 20px; 
                 color: #374151; 
                 margin-bottom: 10px; 
+            }
+            .order-number-display {
+                font-size: 16px;
+                font-weight: bold;
+                color: #059669;
+                text-align: right;
             }
             .order-info { 
                 display: flex; 
@@ -184,7 +187,6 @@ const generateReceiptHTML = () => {
             .grand-total { 
                 font-size: 20px; 
                 padding-top: 10px; 
-               
             }
             .footer { 
                 text-align: center; 
@@ -194,36 +196,23 @@ const generateReceiptHTML = () => {
                 color: #6B7280; 
                 font-size: 12px; 
             }
-            .status-badge { 
-                display: inline-block; 
-                padding: 6px 12px; 
-                border-radius: 20px; 
-                font-size: 12px; 
-                font-weight: bold; 
-            }
-            .status-${orderData.status?.toLowerCase().replace(' ', '-')} { 
-                ${orderData.status === 'Draft' ? 'background: #FEF3C7; color: #92400E;' :
-                  orderData.status === 'Pending' ? 'background: #FEF3C7; color: #92400E;' :
-                  orderData.status === 'Processing' ? 'background: #DBEAFE; color: #1E40AF;' :
-                  orderData.status === 'Completed' ? 'background: #D1FAE5; color: #065F46;' :
-                  orderData.status === 'Accepted' ? 'background: #D1FAE5; color: #065F46;' :
-                  'background: #F3F4F6; color: #374151;'}
-            }
         </style>
     </head>
     <body>
         <div class="receipt">
             <div class="header">
-                <div class="company-name">Hop Shop</div>
+                <div>
+                    <div class="company-name">Hop Shop</div>
+                </div>
+           
             </div>
 
             <div class="order-info">
                 <div class="info-section">
                     <div class="info-title">Order Details</div>
-                    <div class="info-value">Order ID: ${orderData._id || orderId}</div>
+                    <div class="info-value">Order No: ${orderData.orderNo || 'N/A'}</div>
                     <div class="info-value">Date: ${orderData.createdAt ? new Date(orderData.createdAt).toLocaleDateString() : 'N/A'}</div>
                     <div class="info-value">Time: ${orderData.createdAt ? new Date(orderData.createdAt).toLocaleTimeString() : 'N/A'}</div>
-                    <div class="info-value">Status: <span class="status-badge status-${orderData.status?.toLowerCase().replace(' ', '-')}">${orderData.status}</span></div>
                     <div class="info-value">Total Items: ${totalItems}</div>
                 </div>
                 <div class="info-section">
@@ -274,6 +263,7 @@ const generateReceiptHTML = () => {
     </body>
     </html>`;
 };
+
 
   const downloadReceipt = async () => {
     if (!orderData) return;
@@ -343,7 +333,7 @@ const generateReceiptHTML = () => {
               </button>
               <div>
                 <h1 className="text-lg font-bold text-gray-900">
-                  Order #{orderData._id?.slice(-8) || orderId}
+                  Order #{orderData.orderNo || 'N/A'}
                 </h1>
                 <p className="text-xs text-gray-600">
                   {orderData.createdAt && (
@@ -421,7 +411,7 @@ const generateReceiptHTML = () => {
               <div className="space-y-2">
                 <div>
                   <label className="block text-xs font-medium text-gray-600">Order Number</label>
-                  <p className="text-xs text-gray-900 font-mono truncate">{orderData._id || orderId}</p>
+                  <p className="text-xs text-gray-900 font-mono truncate">{orderData.orderNo || 'N/A'}</p>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600">Status</label>

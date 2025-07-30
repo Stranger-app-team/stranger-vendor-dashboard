@@ -43,6 +43,8 @@ interface Order {
   totalAmount: number;
   status: string;
   createdAt: string;
+  paymentStatus?: string;
+  uploadReceipt?: string;
 }
 
 interface StatusCounts {
@@ -62,6 +64,8 @@ export default function OrderPage() {
   const [selectedStatus, setSelectedStatus] = useState('Accepted');
   const [activeStatusCard, setActiveStatusCard] = useState('Accepted');
   const [statusCounts, setStatusCounts] = useState<StatusCounts>({});
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState(false);
 
   const fetchOrders = async (status: string) => {
     setLoading(true);
@@ -73,7 +77,13 @@ export default function OrderPage() {
 
       const res = await fetch(endpoint);
       const data = await res.json();
-      const result = Array.isArray(data) ? data : data.orders || [];
+      console.log('Fetched orders:', data);
+      // For demo/mock: add 'Paid' as payment status if status is Delivered
+      const result = (Array.isArray(data) ? data : data.orders || []).map((order: Order) =>
+        order.status === 'Delivered'
+          ? { ...order, paymentStatus: order.paymentStatus || 'Paid' }
+          : order
+      );
       setOrders(result);
     } catch (err) {
       console.error('Failed to fetch orders:', err);
@@ -121,11 +131,16 @@ export default function OrderPage() {
       if (res.ok) {
         setOrders(prevOrders =>
           prevOrders.map(order =>
-            order._id === orderId ? { ...order, status: newStatus } : order
+            order._id === orderId
+              ? {
+                  ...order,
+                  status: newStatus,
+                  paymentStatus: newStatus === 'Delivered' ? order.paymentStatus || 'Paid' : order.paymentStatus,
+                }
+              : order
           )
         );
         fetchStatusCounts();
-        console.log(`Order status updated to ${newStatus} successfully`);
       } else {
         console.error(`Failed to update order status to ${newStatus}`);
       }
@@ -149,6 +164,29 @@ export default function OrderPage() {
   const handleEdit = (orderId: string) => {
     router.push(`/authenticated/edit-orders/${orderId}`);
   };
+
+  // Function to handle receipt preview in modal
+  const handleReceiptPreview = (receiptUrl: string) => {
+    setPreviewImage(receiptUrl);
+    setShowModal(true);
+  };
+
+  // Function to close modal
+  const closeModal = () => {
+    setShowModal(false);
+    setPreviewImage(null);
+  };
+
+  // Handle modal backdrop click
+  const handleModalBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      closeModal();
+    }
+  };
+
+  // Determine if we should show the payment status column
+  const showPaymentStatus = selectedStatus === 'Delivered';
+  const totalColumns = showPaymentStatus ? 8 : 7;
 
   return (
     <div className="flex flex-col gap-4 justify-center py-10 px-2 sm:px-6">
@@ -189,7 +227,7 @@ export default function OrderPage() {
 
           {/* Order Table */}
           <div className="overflow-x-auto w-full">
-            <table className="min-w-[800px] w-full text-sm text-left text-gray-700">
+            <table className={`${showPaymentStatus ? 'min-w-[900px]' : 'min-w-[800px]'} w-full text-sm text-left text-gray-700`}>
               <thead className="bg-gray-100 h-12 text-xs text-gray-500 uppercase">
                 <tr>
                   <th className="px-4 py-2 whitespace-nowrap">Order</th>
@@ -198,13 +236,16 @@ export default function OrderPage() {
                   <th className="px-4 py-2 whitespace-nowrap">Amount</th>
                   <th className="px-4 py-2 whitespace-nowrap">Status</th>
                   <th className="px-4 py-2 whitespace-nowrap">Date</th>
+                  {showPaymentStatus && (
+                    <th className="px-4 py-2 whitespace-nowrap">Payment Status</th>
+                  )}
                   <th className="px-4 py-2 whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="text-center py-6 text-gray-400">
+                    <td colSpan={totalColumns} className="text-center py-6 text-gray-400">
                       Loading...
                     </td>
                   </tr>
@@ -244,10 +285,32 @@ export default function OrderPage() {
                             {getDisplayStatus(order.status)}
                           </span>
                         </td>
+                 
+
                         <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
                           {date} <br />
                           {time}
                         </td>
+                               {/* Payment Status column with receipt text link - only shown when viewing Delivered orders */}
+                        {showPaymentStatus && (
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <div className="flex items-center space-x-2">
+                              <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                                {order.paymentStatus || 'Paid'}
+                              </span>
+                              {order.uploadReceipt ? (
+                                <button
+                                  onClick={() => handleReceiptPreview(order.uploadReceipt!)}
+                                  className="text-xs text-blue-600 hover:underline cursor-pointer"
+                                >
+                                  View Receipt
+                                </button>
+                              ) : (
+                                <span className="text-xs text-gray-400">No receipt</span>
+                              )}
+                            </div>
+                          </td>
+                        )}
                         <td className="px-4 py-3 space-x-2 text-sm whitespace-nowrap">
                           <button
                             className="text-amber-950 hover:underline"
@@ -288,7 +351,7 @@ export default function OrderPage() {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={7} className="text-center py-6 text-gray-400">
+                    <td colSpan={totalColumns} className="text-center py-6 text-gray-400">
                       No orders found.
                     </td>
                   </tr>
@@ -297,6 +360,56 @@ export default function OrderPage() {
             </table>
           </div>
         </div>
+
+        {/* Receipt Preview Modal */}
+        {showModal && previewImage && (
+          <div 
+            className="fixed inset-0 bg-black/30 bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={handleModalBackdropClick}
+          >
+            <div className="bg-white rounded-lg max-w-4xl max-h-[90vh] overflow-auto relative">
+              {/* Modal Header */}
+              <div className="flex justify-between items-center p-4 border-b">
+                <h3 className="text-lg text-black font-semibold">Payment Receipt</h3>
+                <button
+                  onClick={closeModal}
+                  className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                >
+                  ×
+                </button>
+              </div>
+              
+              {/* Modal Body */}
+              <div className="p-4">
+                <img
+                  src={previewImage}
+                  alt="Payment Receipt"
+                  className="max-w-full h-auto mx-auto"
+                  onError={(e) => {
+                    console.error('Failed to load receipt image:', previewImage);
+                    e.currentTarget.src = '/placeholder-receipt.png'; // Add a fallback image
+                  }}
+                />
+              </div>
+              
+              {/* Modal Footer */}
+              <div className="flex justify-end space-x-2 p-4 border-t">
+                <button
+                  onClick={() => window.open(previewImage, '_blank')}
+                  className="px-4 py-2 bg-emerald-600 text-white rounded text-sm"
+                >
+                  Open in New Tab
+                </button>
+                <button
+                  onClick={closeModal}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 text-sm"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
