@@ -68,6 +68,37 @@ const generateReceiptHTML = () => {
     
     const totalItems = orderData.products?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0;
     
+    // Helper function to format date as dd/mm/yy
+    const formatDate = (dateString) => {
+        if (!dateString) return 'N/A';
+        const date = new Date(dateString);
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = String(date.getFullYear()).slice(-2);
+        return `${day}/${month}/${year}`;
+    };
+    
+    // Helper function to format current date as dd/mm/yy
+    const formatCurrentDate = () => {
+        const date = new Date();
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = String(date.getFullYear()).slice(-2);
+        return `${day}/${month}/${year}`;
+    };
+    
+    // Helper function to format current date and time as dd/mm/yy hh:mm:ss
+    const formatCurrentDateTime = () => {
+        const date = new Date();
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = String(date.getFullYear()).slice(-2);
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+    };
+    
     return `
     <!DOCTYPE html>
     <html>
@@ -213,6 +244,7 @@ const generateReceiptHTML = () => {
                 text-align: right;
             }
 
+
             /* Print-specific styles */
             @media print {
                 body {
@@ -234,11 +266,12 @@ const generateReceiptHTML = () => {
                 </div>
             </div>
 
+
             <div class="order-info">
                 <div class="info-section">
                     <div class="info-title">Order Details</div>
                     <div class="info-value">Order No: ${orderData.orderNo || 'N/A'}</div>
-                    <div class="info-value">Date: ${orderData.createdAt ? new Date(orderData.createdAt).toLocaleDateString() : 'N/A'}</div>
+                    <div class="info-value">Date: ${formatDate(orderData.createdAt)}</div>
                     <div class="info-value">Time: ${orderData.createdAt ? new Date(orderData.createdAt).toLocaleTimeString() : 'N/A'}</div>
                     <div class="info-value">Total Items: ${totalItems}</div>
                 </div>
@@ -250,6 +283,7 @@ const generateReceiptHTML = () => {
                     ${orderData.centreId?.branchId ? `<div class="info-value">Area: ${orderData.centreId.branchId.name}</div>` : ''}
                 </div>
             </div>
+
 
             <div class="products-section">
                 <div class="section-title">Order Items</div>
@@ -277,6 +311,7 @@ const generateReceiptHTML = () => {
                 </table>
             </div>
 
+
             <div class="total-section">
                 <div class="total-row grand-total">
                     <span class="total-label">Grand Total:</span>
@@ -284,13 +319,14 @@ const generateReceiptHTML = () => {
                 </div>
             </div>
 
+
             <div class="footer">
                 <div class="footer-left">
                     HopShop
                 </div>
                 <div class="footer-center">
                     <p>Thank you for your order!</p>
-                    <p>Generated on ${new Date().toLocaleString()}</p>
+                    <p>Generated on ${formatCurrentDateTime()}</p>
                 </div>
                 <div class="footer-right">
                     Order #${orderData.orderNo || 'N/A'}
@@ -300,9 +336,6 @@ const generateReceiptHTML = () => {
     </body>
     </html>`;
 };
-
-
-
 
   const downloadReceipt = async () => {
     if (!orderData) return;
