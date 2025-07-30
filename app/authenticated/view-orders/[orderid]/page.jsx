@@ -165,6 +165,9 @@ const generateReceiptHTML = () => {
             .text-right { 
                 text-align: right; 
             }
+            .text-center { 
+                text-align: center; 
+            }
             .total-section { 
                 background: #F0FDF4; 
                 padding: 20px; 
@@ -189,12 +192,37 @@ const generateReceiptHTML = () => {
                 padding-top: 10px; 
             }
             .footer { 
-                text-align: center; 
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
                 margin-top: 30px; 
                 padding-top: 20px; 
                 border-top: 1px solid #E5E7EB; 
                 color: #6B7280; 
                 font-size: 12px; 
+            }
+            .footer-left {
+                font-weight: bold;
+                color: #059669;
+            }
+            .footer-center {
+                text-align: center;
+                flex-grow: 1;
+            }
+            .footer-right {
+                text-align: right;
+            }
+
+            /* Print-specific styles */
+            @media print {
+                body {
+                    margin: 0;
+                    padding: 10px;
+                }
+                .receipt {
+                    max-width: none;
+                    padding: 20px;
+                }
             }
         </style>
     </head>
@@ -204,7 +232,6 @@ const generateReceiptHTML = () => {
                 <div>
                     <div class="company-name">Hop Shop</div>
                 </div>
-           
             </div>
 
             <div class="order-info">
@@ -229,21 +256,23 @@ const generateReceiptHTML = () => {
                 <table class="products-table">
                     <thead>
                         <tr>
-                            <th style="width: 50%">Product Name</th>
+                            <th style="width: 8%" class="text-center">Sr No</th>
+                            <th style="width: 42%">Product Name</th>
                             <th style="width: 15%" class="text-right">Price</th>
                             <th style="width: 15%" class="text-right">Quantity</th>
                             <th style="width: 20%" class="text-right">Total</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${orderData.products?.map(item => `
+                        ${orderData.products?.map((item, index) => `
                             <tr>
+                                <td class="text-center">${index + 1}</td>
                                 <td>${item.product?.name || 'Unknown Product'}</td>
                                 <td class="text-right">₹${(item.product?.price || 0).toFixed(2)}</td>
                                 <td class="text-right">${item.quantity || 0}</td>
                                 <td class="text-right">₹${((item.product?.price || 0) * (item.quantity || 0)).toFixed(2)}</td>
                             </tr>
-                        `).join('') || '<tr><td colspan="4" style="text-align: center;">No products found</td></tr>'}
+                        `).join('') || '<tr><td colspan="5" style="text-align: center;">No products found</td></tr>'}
                     </tbody>
                 </table>
             </div>
@@ -256,13 +285,23 @@ const generateReceiptHTML = () => {
             </div>
 
             <div class="footer">
-                <p>Thank you for your order!</p>
-                <p>Generated on ${new Date().toLocaleString()}</p>
+                <div class="footer-left">
+                    HopShop
+                </div>
+                <div class="footer-center">
+                    <p>Thank you for your order!</p>
+                    <p>Generated on ${new Date().toLocaleString()}</p>
+                </div>
+                <div class="footer-right">
+                    Order #${orderData.orderNo || 'N/A'}
+                </div>
             </div>
         </div>
     </body>
     </html>`;
 };
+
+
 
 
   const downloadReceipt = async () => {
