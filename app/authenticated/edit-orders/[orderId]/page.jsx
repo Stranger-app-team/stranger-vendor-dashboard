@@ -391,18 +391,22 @@ export default function OrderEditPage() {
                       const canIncrease = currentQuantity < originalQuantity;
                       
                       return (
-                        <div key={productId} className="bg-white border border-green-200 rounded-xl p-3 shadow-sm hover:shadow-md transition-all duration-200 relative">
+                        <div
+                          key={productId}
+                          className="bg-white border border-green-200 rounded-xl p-3 shadow-sm hover:shadow-md transition-all duration-200 relative"
+                        >
                           {/* Status badges */}
                           {currentQuantity > 0 && (
                             <div className="absolute top-2 right-2 z-10 flex flex-col items-end space-y-1">
                               <span className="text-[10px] text-blue-600 font-medium bg-blue-100 px-2 py-0.5 rounded-full">
                                 In Order
                               </span>
-                              {originalQuantity > 0 && currentQuantity < originalQuantity && (
-                                <span className="text-[10px] text-orange-600 font-medium bg-orange-100 px-1.5 py-0.5 rounded-full">
-                                  -{originalQuantity - currentQuantity}
-                                </span>
-                              )}
+                              {originalQuantity > 0 &&
+                                currentQuantity < originalQuantity && (
+                                  <span className="text-[10px] text-orange-600 font-medium bg-orange-100 px-1.5 py-0.5 rounded-full">
+                                    -{originalQuantity - currentQuantity}
+                                  </span>
+                                )}
                             </div>
                           )}
                           {currentQuantity === 0 && (
@@ -412,12 +416,22 @@ export default function OrderEditPage() {
                               </span>
                             </div>
                           )}
-                          
+
                           <div className="flex flex-col items-center mb-2">
                             {/* Product Icon */}
                             <div className="w-8 h-8 mb-2 bg-green-100 rounded-full flex items-center justify-center">
-                              <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                              <svg
+                                className="w-4 h-4 text-green-600"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                                />
                               </svg>
                             </div>
                             <h4
@@ -426,25 +440,61 @@ export default function OrderEditPage() {
                             >
                               {product.name}
                             </h4>
-                            <p className="text-xs font-medium text-green-600 mb-1">₹{(product.price || 0).toFixed(2)}</p>
-                            <p className="text-xs text-gray-500">Max: {originalQuantity}</p>
+                            <p className="text-xs font-medium text-green-600 mb-1">
+                              ₹{(product.price || 0).toFixed(2)}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              Max: {originalQuantity}
+                            </p>
                           </div>
 
                           <div className="flex items-center justify-center gap-2 mb-2">
                             <button
-                              onClick={() => handleProductQuantityChange(productId, Math.max(0, currentQuantity - 1))}
+                              onClick={() =>
+                                handleProductQuantityChange(
+                                  productId,
+                                  Math.max(0, currentQuantity - 1)
+                                )
+                              }
                               disabled={!canEdit || currentQuantity === 0}
                               className="w-7 h-7 flex items-center justify-center rounded-full bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 transition-colors text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               <Minus className="w-4 h-4" />
                             </button>
 
-                            <span className="px-3 py-1 rounded-full bg-gray-50 border border-gray-200 text-gray-900 text-sm font-semibold min-w-[50px] text-center">
-                              {currentQuantity}
-                            </span>
+                            <input
+                              type="number"
+                              value={currentQuantity}
+                              onChange={(e) => {
+                                const newValue = parseInt(e.target.value) || 0;
+                                handleProductQuantityChange(
+                                  productId,
+                                  newValue
+                                );
+                              }}
+                              onKeyDown={(e) => {
+                                if (
+                                  e.key === "-" ||
+                                  e.key === "e" ||
+                                  e.key === "E" ||
+                                  e.key === "+"
+                                ) {
+                                  e.preventDefault();
+                                }
+                              }}
+                              disabled={!canEdit}
+                              min="0"
+                              max={originalQuantity}
+                              className="w-12 h-8 text-center rounded-md bg-gray-50 border border-gray-200 text-gray-900 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed [&::-webkit-outer-spin-button]:opacity-100 [&::-webkit-inner-spin-button]:opacity-100"
+                            />
 
                             <button
-                              onClick={() => handleProductQuantityChange(productId, currentQuantity + 1)}
+                              onClick={() =>
+                                handleProductQuantityChange(
+                                  productId,
+                                  currentQuantity + 1
+                                )
+                              }
                               disabled={!canEdit || !canIncrease}
                               className="w-7 h-7 flex items-center justify-center rounded-full bg-green-50 border border-green-200 text-green-700 hover:bg-green-100 transition-colors text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                             >
