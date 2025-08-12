@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+// --- Status colors remain same as your code ---
 const statusTextColors: Record<string, string> = {
   Processing: 'text-blue-600',
   'On Hold': 'text-orange-600',
@@ -51,7 +52,6 @@ interface StatusCounts {
   [key: string]: number;
 }
 
-// Helper function to change display name
 const getDisplayStatus = (status: string): string => {
   if (status === 'Accepted') return 'Receive Order';
   return status;
@@ -62,10 +62,12 @@ export default function OrderPage() {
   const [loading, setLoading] = useState(true);
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState('Accepted');
-  const [activeStatusCard, setActiveStatusCard] = useState('Accepted');
   const [statusCounts, setStatusCounts] = useState<StatusCounts>({});
+  const [searchQuery, setSearchQuery] = useState('');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+
+  const router = useRouter();
 
   const fetchOrders = async (status: string) => {
     setLoading(true);
@@ -77,12 +79,12 @@ export default function OrderPage() {
 
       const res = await fetch(endpoint);
       const data = await res.json();
-      console.log('Fetched orders:', data);
-      // For demo/mock: add 'Paid' as payment status if status is Delivered
-      const result = (Array.isArray(data) ? data : data.orders || []).map((order: Order) =>
-        order.status === 'Delivered'
-          ? { ...order, paymentStatus: order.paymentStatus || 'Paid' }
-          : order
+
+      const result = (Array.isArray(data) ? data : data.orders || []).map(
+        (order: Order) =>
+          order.status === 'Delivered'
+            ? { ...order, paymentStatus: order.paymentStatus || 'Paid' }
+            : order
       );
       setOrders(result);
     } catch (err) {
@@ -122,20 +124,21 @@ export default function OrderPage() {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${orderId}/status`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       });
 
       if (res.ok) {
-        setOrders(prevOrders =>
-          prevOrders.map(order =>
+        setOrders((prevOrders) =>
+          prevOrders.map((order) =>
             order._id === orderId
               ? {
                   ...order,
                   status: newStatus,
-                  paymentStatus: newStatus === 'Delivered' ? order.paymentStatus || 'Paid' : order.paymentStatus,
+                  paymentStatus:
+                    newStatus === 'Delivered'
+                      ? order.paymentStatus || 'Paid'
+                      : order.paymentStatus,
                 }
               : order
           )
@@ -159,47 +162,52 @@ export default function OrderPage() {
     await handleStatusUpdate(orderId, 'Delivered');
   };
 
-  const router = useRouter();
-
   const handleEdit = (orderId: string) => {
     router.push(`/authenticated/edit-orders/${orderId}`);
   };
 
-  // Function to handle receipt preview in modal
   const handleReceiptPreview = (receiptUrl: string) => {
     setPreviewImage(receiptUrl);
     setShowModal(true);
   };
 
-  // Function to close modal
   const closeModal = () => {
     setShowModal(false);
     setPreviewImage(null);
   };
 
-  // Handle modal backdrop click
   const handleModalBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
       closeModal();
     }
   };
 
-  // Determine if we should show the payment status column
   const showPaymentStatus = selectedStatus === 'Delivered';
   const totalColumns = showPaymentStatus ? 8 : 7;
+
+  // 🔍 Filter logic — search in orderNo, centre name/id, and product names
+  const filteredOrders = orders.filter((order) => {
+    const lowerQuery = searchQuery.toLowerCase();
+    return (
+      order.orderNo.toLowerCase().includes(lowerQuery) ||
+      order.centreId?.name.toLowerCase().includes(lowerQuery) ||
+      order.centreId?.centreId.toLowerCase().includes(lowerQuery) ||
+      order.products.some((p) => p.product.name.toLowerCase().includes(lowerQuery))
+    );
+  });
 
   return (
     <div className="flex flex-col gap-4 justify-center py-10 px-2 sm:px-6">
       <div className="w-full max-w-7xl mx-auto">
+        
+    
 
+        {/* Status Filters */}
         <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-4 mb-6">
           {FILTER_STATUSES.map((status) => (
             <div
               key={status}
-              onClick={() => {
-                setSelectedStatus(status);
-                setActiveStatusCard(status);
-              }}
+              onClick={() => setSelectedStatus(status)}
               className={`cursor-pointer rounded-lg border border-gray-600/20 p-2 text-sm text-center shadow-sm transition bg-transparent w-full sm:w-[200px]`}
             >
               <div className={`font-semibold ${statusTextColors[status] || ''}`}>
@@ -211,35 +219,32 @@ export default function OrderPage() {
             </div>
           ))}
         </div>
-
-        {/* Order Table Box */}
+    {/* 🔍 Search Bar */}
+        <div className="mb-4 flex justify-between items-center text-black gap-3">
+          <input
+            type="text"
+            placeholder="Search orders..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="border border-gray-300 rounded-lg px-4 py-2 w-full sm:w-1/3 focus:outline-none focus:ring focus:ring-emerald-300"
+          />
+        </div>
+        {/* Table */}
         <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
-          {/* Table Header */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
-            <p className="text-sm text-gray-600">
-              Showing 1–{orders.length} of {orders.length} orders
-            </p>
-            <select className="border rounded px-2 py-1 text-sm w-full sm:w-auto">
-              <option>20 per page</option>
-              <option>50 per page</option>
-            </select>
-          </div>
-
-          {/* Order Table */}
           <div className="overflow-x-auto w-full">
-            <table className={`${showPaymentStatus ? 'min-w-[900px]' : 'min-w-[800px]'} w-full text-sm text-left text-gray-700`}>
+            <table
+              className={`${showPaymentStatus ? 'min-w-[900px]' : 'min-w-[800px]'} w-full text-sm text-left text-gray-700`}
+            >
               <thead className="bg-gray-100 h-12 text-xs text-gray-500 uppercase">
                 <tr>
-                  <th className="px-4 py-2 whitespace-nowrap">Order</th>
-                  <th className="px-4 py-2 whitespace-nowrap">Centre</th>
-                  <th className="px-4 py-2 whitespace-nowrap">Items</th>
-                  <th className="px-4 py-2 whitespace-nowrap">Amount</th>
-                  <th className="px-4 py-2 whitespace-nowrap">Status</th>
-                  <th className="px-4 py-2 whitespace-nowrap">Date</th>
-                  {showPaymentStatus && (
-                    <th className="px-4 py-2 whitespace-nowrap">Payment Status</th>
-                  )}
-                  <th className="px-4 py-2 whitespace-nowrap">Actions</th>
+                  <th className="px-4 py-2">Order</th>
+                  <th className="px-4 py-2">Centre</th>
+                  <th className="px-4 py-2">Items</th>
+                  <th className="px-4 py-2">Amount</th>
+                  <th className="px-4 py-2">Status</th>
+                  <th className="px-4 py-2">Date</th>
+                  {showPaymentStatus && <th className="px-4 py-2">Payment Status</th>}
+                  <th className="px-4 py-2">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -249,15 +254,15 @@ export default function OrderPage() {
                       Loading...
                     </td>
                   </tr>
-                ) : orders.length > 0 ? (
-                  orders.map((order) => {
+                ) : filteredOrders.length > 0 ? (
+                  filteredOrders.map((order) => {
                     const dateObj = new Date(order.createdAt);
                     const date = dateObj.toLocaleDateString();
                     const time = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
                     return (
-                      <tr key={order._id} className="border-b border-b-gray-300 bg-white hover:bg-gray-50">
-                        <td className="px-4 py-3 font-medium text-teal-700 whitespace-nowrap">
+                      <tr key={order._id} className="border-b hover:bg-gray-50">
+                        <td className="px-4 py-3 font-medium text-teal-700">
                           <div className="flex items-center space-x-2">
                             <div className="w-8 h-8 rounded-full bg-teal-500 text-white flex items-center justify-center text-xs font-bold">
                               {order.orderNo?.slice(-3)}
@@ -275,8 +280,8 @@ export default function OrderPage() {
                             {order.products?.map((p) => p.product?.name).join(', ')}
                           </div>
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap">₹{order.totalAmount?.toFixed(2)}</td>
-                        <td className="px-4 py-3 whitespace-nowrap">
+                        <td className="px-4 py-3">₹{order.totalAmount?.toFixed(2)}</td>
+                        <td className="px-4 py-3">
                           <span
                             className={`px-2 py-1 rounded-full text-xs font-semibold ${
                               statusBgColors[order.status] || 'bg-gray-100'
@@ -285,15 +290,12 @@ export default function OrderPage() {
                             {getDisplayStatus(order.status)}
                           </span>
                         </td>
-                 
-
-                        <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
-                          {date} <br />
-                          {time}
+                        <td className="px-4 py-3 text-sm text-gray-500">
+                          {date} <br /> {time}
                         </td>
-                               {/* Payment Status column with receipt text link - only shown when viewing Delivered orders */}
+
                         {showPaymentStatus && (
-                          <td className="px-4 py-3 whitespace-nowrap">
+                          <td className="px-4 py-3">
                             <div className="flex items-center space-x-2">
                               <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
                                 {order.paymentStatus || 'Paid'}
@@ -301,7 +303,7 @@ export default function OrderPage() {
                               {order.uploadReceipt ? (
                                 <button
                                   onClick={() => handleReceiptPreview(order.uploadReceipt!)}
-                                  className="text-xs text-blue-600 hover:underline cursor-pointer"
+                                  className="text-xs text-blue-600 hover:underline"
                                 >
                                   View Receipt
                                 </button>
@@ -311,10 +313,11 @@ export default function OrderPage() {
                             </div>
                           </td>
                         )}
-                        <td className="px-4 py-3 space-x-2 text-sm whitespace-nowrap">
+
+                        <td className="px-4 py-3 space-x-2 text-sm">
                           <button
-                            className="text-amber-950 hover:underline"
                             onClick={() => router.push(`/authenticated/view-orders/${order._id}`)}
+                            className="text-amber-950 hover:underline"
                           >
                             View
                           </button>
@@ -330,7 +333,7 @@ export default function OrderPage() {
                                 <button
                                   onClick={() => handleDeliverOrder(order._id)}
                                   disabled={updatingOrderId === order._id}
-                                  className="text-emerald-600 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                                  className="text-emerald-600 hover:underline disabled:opacity-50"
                                 >
                                   {updatingOrderId === order._id ? 'Delivering...' : 'Mark as Delivered'}
                                 </button>
@@ -338,7 +341,7 @@ export default function OrderPage() {
                                 <button
                                   onClick={() => handleAcceptOrder(order._id)}
                                   disabled={updatingOrderId === order._id}
-                                  className="text-green-600 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                                  className="text-green-600 hover:underline disabled:opacity-50"
                                 >
                                   {updatingOrderId === order._id ? 'Accepting...' : 'Accept'}
                                 </button>
@@ -363,36 +366,24 @@ export default function OrderPage() {
 
         {/* Receipt Preview Modal */}
         {showModal && previewImage && (
-          <div 
-            className="fixed inset-0 bg-black/30 bg-opacity-50 flex items-center justify-center z-50 p-4"
+          <div
+            className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4"
             onClick={handleModalBackdropClick}
           >
             <div className="bg-white rounded-lg max-w-4xl max-h-[90vh] overflow-auto relative">
-              {/* Modal Header */}
               <div className="flex justify-between items-center p-4 border-b">
                 <h3 className="text-lg text-black font-semibold">Payment Receipt</h3>
-                <button
-                  onClick={closeModal}
-                  className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
-                >
+                <button onClick={closeModal} className="text-gray-500 hover:text-gray-700 text-2xl font-bold">
                   ×
                 </button>
               </div>
-              
-              {/* Modal Body */}
               <div className="p-4">
                 <img
                   src={previewImage}
                   alt="Payment Receipt"
                   className="max-w-full h-auto mx-auto"
-                  onError={(e) => {
-                    console.error('Failed to load receipt image:', previewImage);
-                    e.currentTarget.src = '/placeholder-receipt.png'; // Add a fallback image
-                  }}
                 />
               </div>
-              
-              {/* Modal Footer */}
               <div className="flex justify-end space-x-2 p-4 border-t">
                 <button
                   onClick={() => window.open(previewImage, '_blank')}
@@ -410,6 +401,7 @@ export default function OrderPage() {
             </div>
           </div>
         )}
+
       </div>
     </div>
   );
