@@ -189,12 +189,17 @@ export default function OrderPage() {
   const filteredOrders = orders.filter((order) => {
     const lowerQuery = searchQuery.toLowerCase();
     return (
-      order.orderNo.toLowerCase().includes(lowerQuery) ||
-      order.centreId?.name.toLowerCase().includes(lowerQuery) ||
-      order.centreId?.centreId.toLowerCase().includes(lowerQuery) ||
-      order.products.some((p) => p.product.name.toLowerCase().includes(lowerQuery))
+      order.orderNo?.toLowerCase().includes(lowerQuery) ||
+      order.centreId?.name?.toLowerCase().includes(lowerQuery) ||
+      order.centreId?.centreId?.toLowerCase().includes(lowerQuery) ||
+      (order.products &&
+        Array.isArray(order.products) &&
+        order.products.some(
+          (p) => p?.product?.name && p.product.name.toLowerCase().includes(lowerQuery)
+        ))
     );
   });
+
 
   return (
     <div className="flex flex-col gap-4 justify-center py-10 px-2 sm:px-6">
