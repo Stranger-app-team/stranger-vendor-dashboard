@@ -79,6 +79,7 @@ export default function OrderPage() {
 
       const res = await fetch(endpoint);
       const data = await res.json();
+      console.log('Fetched orders:', data);
 
       const result = (Array.isArray(data) ? data : data.orders || []).map(
         (order: Order) =>

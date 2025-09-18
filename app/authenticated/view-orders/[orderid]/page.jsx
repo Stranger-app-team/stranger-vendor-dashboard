@@ -48,23 +48,15 @@ export default function OrderDetailsPage() {
     window.location.href = `/authenticated/edit-orders/${orderId}`;
   };
 
-
+  // Fixed: Use server-calculated total instead of client calculation
   const getOrderTotal = () => {
-    if (!orderData?.products) return 0;
-    return orderData.products.reduce((total, item) => {
-      const price = item.product?.price || 0;
-      const quantity = item.quantity || 0;
-      return total + (price * quantity);
-    }, 0);
+    // Always use server-calculated total if available
+    return orderData?.totalAmount || 0;
   };
 
-const generateReceiptHTML = () => {
-    // Fixed total calculation
-    const orderTotal = orderData.products?.reduce((sum, item) => {
-        const price = item.product?.price || 0;
-        const quantity = item.quantity || 0;
-        return sum + (price * quantity);
-    }, 0) || 0;
+  const generateReceiptHTML = () => {
+    // Fixed: Use server total for receipt generation
+    const orderTotal = orderData?.totalAmount || 0;
     
     const totalItems = orderData.products?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0;
     
@@ -244,7 +236,6 @@ const generateReceiptHTML = () => {
                 text-align: right;
             }
 
-
             /* Print-specific styles */
             @media print {
                 body {
@@ -266,7 +257,6 @@ const generateReceiptHTML = () => {
                 </div>
             </div>
 
-
             <div class="order-info">
                 <div class="info-section">
                     <div class="info-title">Order Details</div>
@@ -283,7 +273,6 @@ const generateReceiptHTML = () => {
                     ${orderData.centreId?.branchId ? `<div class="info-value">Area: ${orderData.centreId.branchId.name}</div>` : ''}
                 </div>
             </div>
-
 
             <div class="products-section">
                 <div class="section-title">Order Items</div>
@@ -311,14 +300,12 @@ const generateReceiptHTML = () => {
                 </table>
             </div>
 
-
             <div class="total-section">
                 <div class="total-row grand-total">
                     <span class="total-label">Grand Total:</span>
                     <span class="total-value">₹${orderTotal.toFixed(2)}</span>
                 </div>
             </div>
-
 
             <div class="footer">
                 <div class="footer-left">
@@ -335,7 +322,7 @@ const generateReceiptHTML = () => {
         </div>
     </body>
     </html>`;
-};
+  };
 
   const downloadReceipt = async () => {
     if (!orderData) return;
