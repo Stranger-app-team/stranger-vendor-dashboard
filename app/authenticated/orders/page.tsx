@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams  } from 'next/navigation';
 
 // --- Status colors remain same as your code ---
 const statusTextColors: Record<string, string> = {
@@ -95,6 +95,39 @@ export default function OrderPage() {
       setLoading(false);
     }
   };
+  const fetchHopUserById = async (userId: string) => {
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/hop-user/${userId}`);
+    if (!res.ok) {
+      throw new Error(`Error fetching user: ${res.statusText}`);
+    }
+    const user = await res.json();
+    console.log('HopUser details:', user);
+    return user;
+  } catch (error) {
+    console.error('Failed to fetch HopUser:', error);
+    return null;
+  }
+};
+useEffect(() => {
+  const userDataString = localStorage.getItem('userData');
+  if (userDataString) {
+    try {
+      const userData = JSON.parse(userDataString);
+      const userId = userData?._id;
+      if (userId) {
+        fetchHopUserById(userId);
+      } else {
+        console.warn('User ID not found in userData');
+      }
+    } catch (error) {
+      console.error('Failed to parse userData from localStorage:', error);
+    }
+  } else {
+    console.warn('userData not found in localStorage');
+  }
+}, []);
+
 
   const fetchStatusCounts = async () => {
     try {
@@ -200,8 +233,7 @@ export default function OrderPage() {
         ))
     );
   });
-
-
+  
   return (
     <div className="flex flex-col gap-4 justify-center py-10 px-2 sm:px-6">
       <div className="w-full max-w-7xl mx-auto">
