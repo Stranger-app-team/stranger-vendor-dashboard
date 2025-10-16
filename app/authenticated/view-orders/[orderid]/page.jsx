@@ -513,7 +513,7 @@ export default function OrderDetailsPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600">Centre ID</label>
-                  <p className="text-xs text-gray-900 font-mono">{orderData.centreId?._id || 'N/A'}</p>
+                  <p className="text-xs text-gray-900 font-mono">{orderData.centreId?.centreId || 'N/A'}</p>
                 </div>
                 {orderData.centreId?.regionId && (
                   <div>
