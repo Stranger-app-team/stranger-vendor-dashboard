@@ -508,8 +508,12 @@ export default function OrderDetailsPage() {
                   <p className="text-xs text-gray-900 truncate">{orderData.centreId?.name || 'N/A'}</p>
                 </div>
                 <div>
+                  <label className="block text-xs font-medium text-gray-600">Branch Name</label>
+                  <p className="text-xs text-gray-900 truncate">{orderData.centreId?.branchName || 'N/A'}</p>
+                </div>
+                <div>
                   <label className="block text-xs font-medium text-gray-600">Centre ID</label>
-                  <p className="text-xs text-gray-900 font-mono">{orderData.centreId?.centreId || 'N/A'}</p>
+                  <p className="text-xs text-gray-900 font-mono">{orderData.centreId?._id || 'N/A'}</p>
                 </div>
                 {orderData.centreId?.regionId && (
                   <div>
