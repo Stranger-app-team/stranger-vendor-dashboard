@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { HiBuildingOffice, HiMagnifyingGlass } from 'react-icons/hi2';
+import {useRouter} from "next/navigation"
 
 const OrdersByCenterPage = () => {
   const [centres, setCentres] = useState([]);
@@ -12,6 +13,8 @@ const OrdersByCenterPage = () => {
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
 
+  const router = useRouter();
+   
   const getAuthToken = () => {
     if (typeof window !== 'undefined') {
       return (
@@ -109,10 +112,10 @@ const OrdersByCenterPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div className="max-h-screen bg-slate-50">
+      <div className="max-w-9xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Sidebar: Centers List */}
-        <div className="col-span-1 max-w-sm bg-white border border-slate-200 rounded-lg p-4">
+        <div className="col-span-1 max-w bg-white border border-slate-200 rounded-lg p-4">
           <h2 className="text-sm font-semibold text-slate-900 mb-3 flex items-center">
             <HiBuildingOffice className="w-4 h-4 mr-2 text-slate-600" />
             Centers ({centres.length})
@@ -144,7 +147,7 @@ const OrdersByCenterPage = () => {
                     selectedCentre?._id === centre._id
                       ? 'border-teal-500 bg-teal-50'
                       : 'border-slate-200'
-                  } hover:border-teal-400`}
+                  } hover:border-teal-400 hover:bg-gray-100`}
                 >
                   <p className="text-sm font-medium text-slate-900">
                     {highlightSearchTerm(centre.name, centerSearch)}
@@ -212,7 +215,11 @@ const OrdersByCenterPage = () => {
                           };
 
                           return (
-                            <tr key={order._id} className="border-b border-b-gray-200 bg-white hover:bg-gray-50">
+                            <tr
+                                key={order._id}
+                                className="border-b border-b-gray-200 bg-white hover:bg-gray-50 cursor-pointer"
+                                onClick={() => router.push(`/authenticated/view-orders/${order._id}`)}
+                              >
                               <td className="px-3 py-2 font-medium text-teal-700 whitespace-nowrap">
                                 <div className="flex items-center space-x-2">
                                   <div className="w-6 h-6 rounded-full bg-teal-500 text-white flex items-center justify-center text-[10px] font-bold">

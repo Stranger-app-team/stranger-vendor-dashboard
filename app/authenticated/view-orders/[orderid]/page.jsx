@@ -376,10 +376,10 @@ export default function OrderDetailsPage() {
   );
 
   return (
-    <div className="min-h-screen py-6 bg-gray-50 text-black">
-      <div className="max-w-7xl mx-auto px-3">
+    <div className="max-h-screen bg-gray-50 text-black">
+      <div className="max-w-9xl mx-auto px-3">
         {/* Compact Header */}
-        <div className="mb-3">
+        <div className="mb-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <button
