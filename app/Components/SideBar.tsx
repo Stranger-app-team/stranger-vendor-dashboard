@@ -213,7 +213,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
 
           {/* Notification Dropdown */}
           {notificationOpen && (
-            <div className="absolute left-0 top-full mt-2 w-80 bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-96 overflow-hidden">
+            <div className="absolute left-0 top-full mt-2 w-full max-w-xs md:max-w-md bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-96 overflow-auto">
               {/* Header with Date Filter */}
               <div className="px-4 py-3 border-b border-gray-100">
                 <div className="flex justify-between items-center mb-3">
@@ -231,18 +231,17 @@ const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
                 
                 {/* Date Filter Section */}
                 <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 mb-2">
                     <Calendar className="w-4 h-4 text-gray-500" />
                     <label className="text-xs font-medium text-gray-700">Filter by Date:</label>
                   </div>
-                  <div className="flex items-center space-x-2">
                     <input
                       type="date"
                       value={selectedDate}
                       onChange={handleDateChange}
-                      className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
+                      className="w-full px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 mb-2"
                     />
-                    <div className="flex space-x-1">
+                    <div className="flex space-x-">
                       <button
                         onClick={() => handleQuickDateSelect('today')}
                         className="px-2 py-1 text-xs bg-teal-50 text-teal-700 rounded hover:bg-teal-100 transition-colors"
@@ -256,7 +255,6 @@ const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
                         Yesterday
                       </button>
                     </div>
-                  </div>
                   <p className="text-xs text-gray-500">
                     Showing alerts for {formatSelectedDate(selectedDate)} ({notificationCount})
                   </p>
@@ -340,7 +338,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className="bg-white w-64 h-screen fixed shadow-md flex-col hidden md:flex z-30">
+      <aside className="bg-white w-64 h-screen fixed shadow-md flex-col hidden md:flex z-30 overflow-hidden">
         {sidebarContent}
       </aside>
       {/* Mobile Sidebar Drawer */}

@@ -202,7 +202,7 @@ export default function OrderPage() {
     <div className="flex flex-col gap-4 justify-center px-3 sm:px-6">
       <div className="w-full max-w-9xl mx-auto">
         {/* 🔹 Toolbar: Filters + Search Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 bg-white shadow-sm border border-gray-100 rounded-xl p-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3  bg-white shadow-sm border border-gray-100  p-3">
           {/* Status Filters */}
           <div className="flex flex-wrap gap-2">
             {FILTER_STATUSES.map((status) => (
@@ -584,7 +584,7 @@ export default function OrderPage() {
               </tbody>
             </table>
           </div>
-        </div>
+        </div>  
 
         {/* 🧾 Receipt Preview Modal */}
         {showModal && previewImage && (

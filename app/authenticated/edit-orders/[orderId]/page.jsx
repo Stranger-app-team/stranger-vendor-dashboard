@@ -204,10 +204,10 @@ export default function OrderEditPage() {
   );
 
   return (
-    <div className="min-h-screen py-6 bg-gray-50 text-gray-600">
-      <div className="max-w-7xl mx-auto px-3">
+    <div className="max-h-screen bg-gray-50 text-gray-600">
+      <div className="max-w-9xl mx-auto px-3">
         {/* Compact Header */}
-        <div className="mb-3">
+        <div className="bg-white rounded-lg shadow-md p-4 border border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <button
@@ -254,7 +254,7 @@ export default function OrderEditPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 xl:grid-cols-4">
           {/* Left Column - Current Order Items */}
           <div className="xl:col-span-1 space-y-3">
             {/* Order Items Card */}
@@ -315,7 +315,7 @@ export default function OrderEditPage() {
 
             {/* Order Summary */}
             <div className="bg-gradient-to-br from-teal-50 to-white border border-teal-200 rounded-lg p-3">
-              <h2 className="text-sm font-semibold text-teal-800 mb-3">Order Summary</h2>
+              <h2 className="text-sm font-semibold text-teal-800">Order Summary</h2>
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-xs text-teal-700">Items:</span>

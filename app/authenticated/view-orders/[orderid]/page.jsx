@@ -7,8 +7,14 @@ export default function OrderDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [orderId, setOrderId] = useState(null);
-  const [viewMode, setViewMode] = useState('card');
+  const [viewMode, setViewMode] = useState('list');
   const [downloading, setDownloading] = useState(false);
+
+//   useEffect(() => {
+//   if (orderData?.centreId?.branchName) {
+//     console.log("Branch Name:", orderData.centreId.branchName);
+//   }
+// }, [orderData?.centreId?.branchName]);
 
   useEffect(() => {
     // Extract order ID from URL
@@ -378,92 +384,72 @@ export default function OrderDetailsPage() {
   return (
     <div className="max-h-screen bg-gray-50 text-black">
       <div className="max-w-9xl mx-auto px-3">
-        {/* Compact Header */}
-        <div className="mb-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={handleBack}
-                className="p-1.5 hover:bg-white hover:shadow-sm rounded-md transition-all duration-200"
-              >
-                <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <div>
-                <h1 className="text-lg font-bold text-gray-900">
-                  Order #{orderData.orderNo || 'N/A'}
-                </h1>
-                <p className="text-xs text-gray-600">
-                  {orderData.createdAt && (
-                    <>
-                      {new Date(orderData.createdAt).toLocaleDateString()} • {new Date(orderData.createdAt).toLocaleTimeString()}
-                    </>
-                  )}
-                </p>
-              </div>
-            </div>
+        {/* Header */}
+<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white shadow-md rounded-lg p-4 border border-gray-200 space-y-3 sm:space-y-0">
+  <div className="flex items-center space-x-3 w-full sm:w-auto">
+    <button
+      onClick={handleBack}
+      className="p-2 hover:bg-gray-100 rounded-md flex-shrink-0"
+    >
+      <svg
+        className="w-5 h-5 text-gray-700"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M15 19l-7-7 7-7"
+        />
+      </svg>
+    </button>
+    <div className="truncate">
+      <h1 className="text-xl font-semibold text-gray-900 truncate">
+        Order #{orderData.orderNo || "N/A"}
+      </h1>
+      <p className="text-sm text-gray-500 whitespace-normal sm:whitespace-nowrap">
+        {orderData.createdAt && new Date(orderData.createdAt).toLocaleDateString()} •{" "}
+        {orderData.createdAt && new Date(orderData.createdAt).toLocaleTimeString()}
+      </p>
+    </div>
+  </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <span
-                className={`px-3 py-1 rounded-full text-xs font-semibold shadow-sm border ${
-                  orderData.status === 'Draft' ? 'bg-amber-100 text-amber-800 border-amber-200' :
-                  orderData.status === 'Pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                  orderData.status === 'Processing' ? 'bg-blue-100 text-blue-800 border-blue-200' :
-                  orderData.status === 'Completed' ? 'bg-green-100 text-green-800 border-green-200' :
-                  orderData.status === 'Cancelled' ? 'bg-red-100 text-red-800 border-red-200' :
-                  orderData.status === 'Failed' ? 'bg-red-100 text-red-800 border-red-200' :
-                  orderData.status === 'Returned' ? 'bg-orange-100 text-orange-800 border-orange-200' :
-                  orderData.status === 'On Hold' ? 'bg-orange-100 text-orange-800 border-orange-200' :
-                  orderData.status === 'Declined' ? 'bg-red-100 text-red-800 border-red-200' :
-                  orderData.status === 'Accepted' ? 'bg-green-100 text-green-800 border-green-200' :
-                  'bg-gray-100 text-gray-800 border-gray-200'
-                }`}
-                style={{ minWidth: 120, textAlign: 'center' }}
-              >
-                Current Status: {orderData.status}
-              </span>
+  <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
+    <span
+      className={`px-3 py-1 rounded-full text-xs font-medium shadow-sm ${
+        orderData.status === "Completed"
+          ? "bg-green-100 text-green-700"
+          : orderData.status === "Draft"
+          ? "bg-yellow-100 text-yellow-800"
+          : "bg-gray-100 text-gray-800"
+      } whitespace-nowrap`}
+    >
+      Current Status : {orderData.status}
+    </span>
+    <button
+      onClick={downloadReceipt}
+      disabled={downloading}
+      className="inline-flex items-center px-3 py-1.5 bg-teal-600 text-white text-xs font-medium rounded-md hover:bg-teal-700 disabled:opacity-50"
+    >
+      {downloading ? "Generating..." : "Download Receipt"}
+    </button>
+    {canEdit && (
+      <button
+        onClick={handleEdit}
+        className="px-3 py-1.5 bg-gray-800 text-white text-xs font-medium rounded-md hover:bg-black whitespace-nowrap"
+      >
+        Edit
+      </button>
+    )}
+  </div>
+</div>
 
-              {/* Download Receipt Button */}
-              <button
-                onClick={downloadReceipt}
-                disabled={downloading}
-                className="px-3 py-1.5 bg-teal-600 text-white rounded-md hover:bg-teal-700 transition-colors text-xs font-semibold shadow-sm border border-blue-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-              >
-                {downloading ? (
-                  <>
-                    <svg className="animate-spin h-3 w-3" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    Download Receipt
-                  </>
-                )}
-              </button>
 
-              {/* Edit Button for Accepted Orders */}
-              {orderData.status === 'Accepted' && (
-                <button
-                  onClick={handleEdit}
-                  className="px-3 py-1.5 bg-teal-600 text-white rounded-md hover:bg-teal-700 transition-colors text-xs font-semibold shadow-sm border border-teal-200"
-                >
-                  Edit
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 xl:grid-cols-4">
           {/* Order Information & Summary - Left Column */}
-          <div className="xl:col-span-1 space-y-3">
+          <div className="xl:col-span-1">
             {/* Order Info Card */}
             <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
               <h2 className="text-sm font-semibold text-gray-900 mb-3">Order Information</h2>
