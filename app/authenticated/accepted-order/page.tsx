@@ -156,7 +156,7 @@ export default function AcceptedOrdersPage() {
                   <tr>
                     <th className="px-3 py-2 whitespace-nowrap">Order ID</th>
                     <th className="px-3 py-2 whitespace-nowrap">Items</th>
-                    <th className="px-3 py-2 whitespace-nowrap">Amount</th>
+                    {/* <th className="px-3 py-2 whitespace-nowrap">Amount</th> */}
                     <th className="px-3 py-2 whitespace-nowrap">Vendor</th>
                     <th className="px-3 py-2 whitespace-nowrap">Status</th>
                     <th className="px-3 py-2 whitespace-nowrap">Date</th>
@@ -201,9 +201,9 @@ export default function AcceptedOrdersPage() {
                           </div>
                         </td>
 
-                        <td className="px-3 py-2 whitespace-nowrap">
+                        {/* <td className="px-3 py-2 whitespace-nowrap">
                           ₹{order.totalAmount?.toFixed(2)}
-                        </td>
+                        </td> */}
 
                         <td className="px-3 py-2 whitespace-nowrap text-gray-800">
                           {vendor?.name || 'N/A'}
