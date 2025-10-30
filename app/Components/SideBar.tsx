@@ -1,7 +1,7 @@
 'use client';
 
 import { FC, useState, useEffect, useRef } from "react";
-import { ShoppingCart, Building2, LogOut, Bell, Calendar,Upload} from "lucide-react";
+import { ShoppingCart, Building2, LogOut, Bell, Calendar,Upload,CheckCircle,} from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import React from "react";
@@ -32,10 +32,18 @@ interface NotificationResponse {
   customers: Customer[];
 }
 
+interface VendorData {
+  _id: string;
+  name: string;
+  userId: string;
+  status: string;
+}
+
 const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [notifications, setNotifications] = useState<Customer[]>([]);
   const [notificationCount, setNotificationCount] = useState(0);
+   const [vendor, setVendor] = useState<VendorData | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => {
     const today = new Date();
@@ -43,12 +51,30 @@ const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
   });
   const notificationRef = useRef<HTMLDivElement>(null);
 
+  const [acceptedCount, setAcceptedCount] = useState(0);
+  const [acceptedLoading, setAcceptedLoading] = useState(false);
+
   const pathname = usePathname();
   const router = useRouter();
 
   const isOrders = pathname === "/authenticated/orders";
   const isOrdersByCenter = pathname === "/authenticated/ordersby-center";
+  const isAcceptedOrders = pathname === "/authenticated/accepted-order";
 
+    const fetchVendorData = () => {
+    const userDataString = localStorage.getItem('userData');
+    if (userDataString) {
+      try {
+        const userData = JSON.parse(userDataString);
+        setVendor(userData);
+      } catch (error) {
+        console.error('Error parsing vendor data:', error);
+      }
+    }
+  };
+    useEffect(() => {
+    fetchVendorData();
+  }, []);
   // Fetch notifications for selected date
   const fetchNotifications = async (date: string = selectedDate) => {
     try {
@@ -76,6 +102,53 @@ const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
     }
   };
 
+  const safeParse = (str: string | null) => {
+    try {
+      return str ? JSON.parse(str) : null;
+    } catch {
+      return null;
+    }
+  };
+
+const fetchAcceptedCount = async () => {
+  try {
+    setAcceptedLoading(true);
+    const token = localStorage.getItem('authToken');
+    const userDataString = localStorage.getItem('userData');
+    
+    if (!userDataString) {
+      console.error('User data not found');
+      return;
+    }
+
+    const userData = JSON.parse(userDataString);
+    const vendorId = userData._id; // Using _id from the stored userData
+
+    if (!vendorId) {
+      console.error('Vendor ID not found in user data');
+      return;
+    }
+
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/orders/accepted/${vendorId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (res.ok) {
+      const data = await res.json();
+      setAcceptedCount(data.count ?? 0);
+    }
+  } catch (err) {
+    console.error('Error fetching accepted count:', err);
+  } finally {
+    setAcceptedLoading(false);
+  }
+};
   // Close notification dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -98,10 +171,15 @@ const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
   // Initial fetch and periodic refresh
   useEffect(() => {
     fetchNotifications();
+    fetchAcceptedCount();
     
     const interval = setInterval(() => fetchNotifications(), 300000); // Refresh every 5 minutes
+    const acceptedInterval = setInterval(() => fetchAcceptedCount(), 5 * 60 * 1000);
     
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      clearInterval(acceptedInterval);
+    };
   }, []);
 
   const handleLogout = () => {
@@ -166,7 +244,9 @@ const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
         </div>
         <div>
           <div className="text-teal-700 font-semibold text-lg">HOP SHOP</div>
-          <div className="text-xs text-gray-500">Vendor Dashboard</div>
+          <div className="text-xs text-gray-500">
+            {vendor?.name || 'Vendor Dashboard'}
+          </div>
         </div>
       </div>
 
@@ -186,6 +266,22 @@ const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
           <Building2 className="w-5 h-5" />
           <span>Orders By Center</span>
         </Link>
+
+<Link
+          href="/authenticated/accepted-order"
+          className={`${baseLinkClass} ${isAcceptedOrders ? activeClass : inactiveClass} relative`}
+        >
+          <CheckCircle className="w-5 h-5" />
+          <span>{vendor?.name}</span>
+
+          {/* Badge */}
+          {acceptedCount > 0 && (
+            <span className="absolute right-4 bg-green-600 text-white text-xs rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+              {acceptedCount > 99 ? '99+' : acceptedCount}
+            </span>
+          )}
+        </Link>
+
         <Link
   href="/authenticated/add-product-form"
   className={`${baseLinkClass} ${pathname === "/authenticated/add-product-form" ? activeClass : inactiveClass}`}
