@@ -153,11 +153,20 @@ const SalesAnalyticsDashboard = () => {
             {productChartData.length > 0 ? (
               <BarChart
                 dataset={productChartData}
-                xAxis={[{ scaleType: "band", dataKey: "x" }]}
+                xAxis={[{ scaleType: "band", dataKey: "x",tickLabelStyle: { display: "none" }, }]}
                 series={[
                   { dataKey: "y", label: "Revenue", color: "#1976d2" },
+                ]}             
+                yAxis={[
+                  {
+                    valueFormatter: (v: number) => {
+                      if (v >= 1000000) return (v / 1000000).toFixed(2).replace(/\.00$/, "") + "M";
+                      if (v >= 1000) return (v / 1000).toFixed(0) + "K";
+                      return v.toString();
+                    },
+                  },
                 ]}
-                height={350}
+                height={500}
                 margin={{ top: 10, bottom: 10, left: 10, right: 10 }}
               />
             ) : (
