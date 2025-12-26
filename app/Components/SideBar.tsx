@@ -1,7 +1,7 @@
 'use client';
 
 import { FC, useState, useEffect, useRef } from "react";
-import { ShoppingCart, Building2, LogOut, Bell, Calendar,Upload,CheckCircle, BarChart3,} from "lucide-react";
+import { ShoppingCart, Building2, LogOut, Bell, Calendar,Upload,CheckCircle, BarChart3, Package,} from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import React from "react";
@@ -61,6 +61,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
   const isOrdersByCenter = pathname === "/authenticated/ordersby-center";
   const isAcceptedOrders = pathname === "/authenticated/accepted-order";
   const isAnalysis = pathname === "/authenticated/Analysis" || pathname === "/authenticated/analysis";
+  const isInventory = pathname === "/authenticated/inventory";
 
     const fetchVendorData = () => {
     const userDataString = localStorage.getItem('userData');
@@ -290,6 +291,14 @@ const fetchAcceptedCount = async () => {
   <Upload className="w-5 h-5" />
   <span>Add Product</span>
 </Link>
+
+        <Link
+          href="/authenticated/inventory"
+          className={`${baseLinkClass} ${isInventory ? activeClass : inactiveClass}`}
+        >
+          <Package className="w-5 h-5" />
+          <span>Inventory</span>
+        </Link>
 
         {/* Analysis */}
         <Link
