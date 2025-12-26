@@ -138,7 +138,7 @@ export default function AcceptedOrdersPage() {
                 placeholder="Search orders..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50 focus:ring-2 focus:ring-teal-500"
+                className="w-full pl-9 pr-3 py-2 border text-black border-slate-300 rounded-lg text-sm bg-slate-50 focus:ring-2 focus:ring-teal-500"
               />
             </div>
           </div>
