@@ -287,7 +287,9 @@ export default function OrderDetailsPage() {
                         <tr>
                             <th style="width: 8%" class="text-center">Sr No</th>
                             <th style="width: 42%">Product Name</th>
+                            <th style="width: 15%" class="text-right">Price</th>
                             <th style="width: 15%" class="text-right">Quantity</th>
+                            <th style="width: 20%" class="text-right">Total</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -295,7 +297,9 @@ export default function OrderDetailsPage() {
                             <tr>
                                 <td class="text-center">${index + 1}</td>
                                 <td>${item.product?.name || 'Unknown Product'}</td>
+                                <td class="text-right">₹${(item.product?.price || 0).toFixed(2)}</td>
                                 <td class="text-right">${item.quantity || 0}</td>
+                                <td class="text-right">₹${((item.product?.price || 0) * (item.quantity || 0)).toFixed(2)}</td>
                             </tr>
                         `).join('') || '<tr><td colspan="5" style="text-align: center;">No products found</td></tr>'}
                     </tbody>
@@ -522,14 +526,14 @@ export default function OrderDetailsPage() {
                     {orderData.products?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0}
                   </span>
                 </div>
-                {/* <div className="border-t border-teal-200 pt-2">
+                <div className="border-t border-teal-200 pt-2">
                   <div className="flex justify-between">
                     <span className="text-xs text-teal-800 font-semibold">Total:</span>
                     <span className="text-sm font-bold text-teal-900">
                       ₹{getOrderTotal().toFixed(2)}
                     </span>
                   </div>
-                </div> */}
+                </div>
               </div>
             </div>
           </div>
@@ -591,17 +595,17 @@ export default function OrderDetailsPage() {
                             </h3>
                             {/* Price and Quantity */}
                             <div className="text-center space-y-1">
-                              {/* <p className="text-xs text-green-600 font-medium">₹{(item.product?.price || 0).toFixed(2)} each</p> */}
+                              <p className="text-xs text-green-600 font-medium">₹{(item.product?.price || 0).toFixed(2)} each</p>
                               <p className="text-xs text-gray-600">Qty: {item.quantity || 0}</p>
                               {/* Calculation */}
-                              {/* <div className="border-t border-green-200 pt-1 mt-2">
+                              <div className="border-t border-green-200 pt-1 mt-2">
                                 <p className="text-xs text-gray-500">
                                   {item.quantity || 0} × ₹{(item.product?.price || 0).toFixed(2)}
                                 </p>
                                 <p className="text-sm font-bold text-green-700">
                                   ₹{((item.product?.price || 0) * (item.quantity || 0)).toFixed(2)}
                                 </p>
-                              </div> */}
+                              </div>
                             </div>
                           </div>
                         ))}
@@ -612,18 +616,18 @@ export default function OrderDetailsPage() {
                           <thead className="bg-teal-50">
                             <tr>
                               <th className="px-2 py-2 text-left uppercase tracking-wide text-gray-700">Product</th>
-                              {/* <th className="px-2 py-2 text-right uppercase tracking-wide text-gray-700">Price</th> */}
+                              <th className="px-2 py-2 text-right uppercase tracking-wide text-gray-700">Price</th>
                               <th className="px-2 py-2 text-right uppercase tracking-wide text-gray-700">Qty</th>
-                              {/* <th className="px-2 py-2 text-right uppercase tracking-wide text-gray-700">Total</th> */}
+                              <th className="px-2 py-2 text-right uppercase tracking-wide text-gray-700">Total</th>
                             </tr>
                           </thead>
                           <tbody>
                             {orderData.products.map((item, idx) => (
                               <tr key={idx} className="border-b border-gray-100 hover:bg-green-50">
                                 <td className="px-2 py-2 truncate text-sm max-w-[160px]">{item.product?.name || 'Unknown Product'}</td>
-                                {/* <td className="px-2 py-2 text-xs text-right">₹{(item.product?.price || 0).toFixed(2)}</td> */}
+                                <td className="px-2 py-2 text-xs text-right">₹{(item.product?.price || 0).toFixed(2)}</td>
                                 <td className="px-2 py-2 text-xs text-right">{item.quantity || 0}</td>
-                                {/* <td className="px-2 py-2 text-xs text-right font-bold text-green-700">₹{((item.product?.price || 0) * (item.quantity || 0)).toFixed(2)}</td> */}
+                                <td className="px-2 py-2 text-xs text-right font-bold text-green-700">₹{((item.product?.price || 0) * (item.quantity || 0)).toFixed(2)}</td>
                               </tr>
                             ))}
                           </tbody>

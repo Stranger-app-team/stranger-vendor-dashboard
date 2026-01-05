@@ -177,7 +177,7 @@ export default function AcceptedOrdersPage() {
                         className="border-b border-b-gray-200 bg-white hover:bg-gray-50 cursor-pointer"
                         onClick={() =>
                           router.push(
-                            `/authenticated/view-orders/${order.orderId?._id}`
+                            `/authenticated/accepted-order-detail/${order.orderId?._id}`
                           )
                         }
                       >
