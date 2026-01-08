@@ -17,6 +17,13 @@ interface Order {
     _id: string;
     products: { product: Product; quantity: number }[];
   };
+  centreId?: {
+    _id: string;
+    name: string;
+    loginId: string;
+    branchName: string;
+    centreId: string;
+  };
   totalAmount: number;
   createdAt: string;
 }
@@ -100,7 +107,8 @@ export default function AcceptedOrdersPage() {
       const lower = searchTerm.toLowerCase();
       const filtered = orders.filter(
         (order) =>
-          order.orderId?._id?.toLowerCase().includes(lower) ||
+          order.centreId?.centreId?.toLowerCase().includes(lower) ||
+          order.centreId?.name?.toLowerCase().includes(lower) ||
           order.orderId?.products?.some((p) =>
             p.product?.name?.toLowerCase().includes(lower)
           )
@@ -154,7 +162,7 @@ export default function AcceptedOrdersPage() {
               <table className="min-w-[800px] w-full text-xs text-left text-gray-700">
                 <thead className="bg-gray-100 h-10 text-[11px] text-gray-500 uppercase">
                   <tr>
-                    <th className="px-3 py-2 whitespace-nowrap">Order ID</th>
+                    <th className="px-3 py-2 whitespace-nowrap">Centre ID</th>
                     <th className="px-3 py-2 whitespace-nowrap">Items</th>
                     {/* <th className="px-3 py-2 whitespace-nowrap">Amount</th> */}
                     <th className="px-3 py-2 whitespace-nowrap">Vendor</th>
@@ -184,10 +192,10 @@ export default function AcceptedOrdersPage() {
                         <td className="px-3 py-2 font-medium text-teal-700 whitespace-nowrap">
                           <div className="flex items-center space-x-2">
                             <div className="w-6 h-6 rounded-full bg-teal-500 text-white flex items-center justify-center text-[10px] font-bold">
-                              {order.orderId?._id?.slice(-3)}
+                              {order.centreId?.centreId?.slice(-3) || 'N/A'}
                             </div>
-                            <span className="truncate max-w-[80px]">
-                              {order.orderId?._id}
+                            <span>
+                              {order.centreId?.centreId || order.centreId?.name || 'N/A'}
                             </span>
                           </div>
                         </td>
