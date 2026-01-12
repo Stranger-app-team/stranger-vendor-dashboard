@@ -29,14 +29,24 @@ export default function OrderDetailsPage() {
 
     const fetchOrder = async () => {
       try {
-        const orderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders/${orderId}`);
-        if (!orderRes.ok) throw new Error("Failed to fetch order");
-        const orderData = await orderRes.json();
-        console.log("Order Data:", orderData);
-        setOrderData(orderData.order);
+        const token = localStorage.getItem("authToken");
+
+        const orderRes = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/orders/vendor-order-details/${orderId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!orderRes.ok) throw new Error("Failed to fetch vendor order");
+        const data = await orderRes.json();
+        setOrderData(data.vendorOrder || data);
       } catch (err) {
         console.error(err);
-        setError("Error loading order data");
+        setError("Error loading vendor order data");
       } finally {
         setLoading(false);
       }
@@ -55,10 +65,8 @@ export default function OrderDetailsPage() {
   };
 
   // Fixed: Use server-calculated total instead of client calculation
-  const getOrderTotal = () => {
-    // Always use server-calculated total if available
-    return orderData?.totalAmount || 0;
-  };
+const getOrderTotal = () => orderData?.totalAmount || 0;
+
 
   const generateReceiptHTML = () => {
     // Fixed: Use server total for receipt generation
@@ -102,7 +110,7 @@ export default function OrderDetailsPage() {
     <html>
     <head>
         <meta charset="utf-8">
-        <title>Order Receipt - ${orderData.orderNo || 'N/A'}</title>
+        <title>Order Receipt - ${orderData.orderId?.orderNo || 'N/A'}</title>
         <style>
             body { 
                 font-family: Arial, sans-serif; 
@@ -266,9 +274,9 @@ export default function OrderDetailsPage() {
             <div class="order-info">
                 <div class="info-section">
                     <div class="info-title">Order Details</div>
-                    <div class="info-value">Order No: ${orderData.orderNo || 'N/A'}</div>
-                    <div class="info-value">Date: ${formatDate(orderData.createdAt)}</div>
-                    <div class="info-value">Time: ${orderData.createdAt ? new Date(orderData.createdAt).toLocaleTimeString() : 'N/A'}</div>
+                    <div class="info-value">Order No: ${orderData.orderId?.orderNo || 'N/A'}</div>
+                    <div class="info-value">Date: ${formatDate(orderData.orderId?.createdAt)}</div>
+                    <div class="info-value">Time: ${orderData.orderId?.createdAt ? new Date(orderData.orderId?.createdAt).toLocaleTimeString() : 'N/A'}</div>
                     <div class="info-value">Total Items: ${totalItems}</div>
                 </div>
                 <div class="info-section">
@@ -296,10 +304,10 @@ export default function OrderDetailsPage() {
                         ${orderData.products?.map((item, index) => `
                             <tr>
                                 <td class="text-center">${index + 1}</td>
-                                <td>${item.product?.name || 'Unknown Product'}</td>
-                                <td class="text-right">₹${(item.product?.price || 0).toFixed(2)}</td>
+                                <td>${item.name || 'Unknown Product'}</td>
+                                <td class="text-right">₹${(item.price || 0).toFixed(2)}</td>
                                 <td class="text-right">${item.quantity || 0}</td>
-                                <td class="text-right">₹${((item.product?.price || 0) * (item.quantity || 0)).toFixed(2)}</td>
+                                <td class="text-right">₹${((item.price || 0) * (item.quantity || 0)).toFixed(2)}</td>
                             </tr>
                         `).join('') || '<tr><td colspan="5" style="text-align: center;">No products found</td></tr>'}
                     </tbody>
@@ -322,7 +330,7 @@ export default function OrderDetailsPage() {
                     <p>Generated on ${formatCurrentDateTime()}</p>
                 </div>
                 <div class="footer-right">
-                    Order #${orderData.orderNo || 'N/A'}
+                    Order #${orderData.orderId?.orderNo || 'N/A'}
                 </div>
             </div>
         </div>
@@ -358,7 +366,7 @@ export default function OrderDetailsPage() {
     }
   };
 
-  const canEdit = orderData?.status === 'Draft' || orderData?.status === 'Accepted';
+  const canEdit = orderData?.vendorOrderStatus === 'Draft' || orderData?.vendorOrderStatus === 'Accepted';
 
   if (loading) return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -407,11 +415,11 @@ export default function OrderDetailsPage() {
     </button>
     <div className="truncate">
       <h1 className="text-xl font-semibold text-gray-900 truncate">
-        Order #{orderData.orderNo || "N/A"}
+        Order #{orderData.orderId?.orderNo || "N/A"}
       </h1>
       <p className="text-sm text-gray-500 whitespace-normal sm:whitespace-nowrap">
-        {orderData.createdAt && new Date(orderData.createdAt).toLocaleDateString()} •{" "}
-        {orderData.createdAt && new Date(orderData.createdAt).toLocaleTimeString()}
+        {orderData.orderId?.createdAt && new Date(orderData.orderId?.createdAt).toLocaleDateString()} •{" "}
+        {orderData.orderId?.createdAt && new Date(orderData.orderId?.createdAt).toLocaleTimeString()}
       </p>
     </div>
   </div>
@@ -419,14 +427,14 @@ export default function OrderDetailsPage() {
   <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
     <span
       className={`px-3 py-1 rounded-full text-xs font-medium shadow-sm ${
-        orderData.status === "Completed"
+        orderData.vendorOrderStatus === "Delivered"
           ? "bg-green-100 text-green-700"
-          : orderData.status === "Draft"
-          ? "bg-yellow-100 text-yellow-800"
+          : orderData.vendorOrderStatus === "Accepted"
+          ? "bg-blue-100 text-blue-800"
           : "bg-gray-100 text-gray-800"
       } whitespace-nowrap`}
     >
-      Current Status : {orderData.status}
+      Current Status : {orderData.vendorOrderStatus || orderData.status}
     </span>
     <button
       onClick={downloadReceipt}
@@ -456,22 +464,22 @@ export default function OrderDetailsPage() {
               <div className="space-y-2">
                 <div>
                   <label className="block text-xs font-medium text-gray-600">Order Number</label>
-                  <p className="text-xs text-gray-900 font-mono truncate">{orderData.orderNo || 'N/A'}</p>
+                  <p className="text-xs text-gray-900 font-mono truncate">{orderData.orderId?.orderNo || 'N/A'}</p>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600">Status</label>
-                  <p className="text-xs text-gray-900">{orderData.status}</p>
+                  <p className="text-xs text-gray-900">{orderData.vendorOrderStatus || orderData.status}</p>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600">Created</label>
                   <p className="text-xs text-gray-900">
-                    {orderData.createdAt && new Date(orderData.createdAt).toLocaleString('en-US', {
+                    {orderData.orderId?.createdAt && new Date(orderData.orderId?.createdAt).toLocaleString('en-US', {
                       month: 'short', day: 'numeric',
                       hour: '2-digit', minute: '2-digit'
                     })}
                   </p>
                 </div>
-                {orderData.updatedAt && orderData.updatedAt !== orderData.createdAt && (
+                {orderData.updatedAt && orderData.updatedAt !== orderData.orderId?.createdAt && (
                   <div>
                     <label className="block text-xs font-medium text-gray-600">Updated</label>
                     <p className="text-xs text-gray-900">
@@ -495,7 +503,7 @@ export default function OrderDetailsPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600">Branch Name</label>
-                  <p className="text-xs text-gray-900 truncate">{orderData.centreId?.branchName || 'N/A'}</p>
+                  <p className="text-xs text-gray-900 truncate">{orderData.centreId?.name || 'N/A'}</p>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600">Centre ID</label>
@@ -590,20 +598,20 @@ export default function OrderDetailsPage() {
                               </svg>
                             </div>
                             {/* Product Name */}
-                            <h3 className="font-semibold text-gray-900 text-xs text-center mb-2 truncate" title={item.product?.name}>
-                              {item.product?.name || 'Unknown Product'}
+                            <h3 className="font-semibold text-gray-900 text-xs text-center mb-2 truncate" title={item.name}>
+                              {item.name || 'Unknown Product'}
                             </h3>
                             {/* Price and Quantity */}
                             <div className="text-center space-y-1">
-                              <p className="text-xs text-green-600 font-medium">₹{(item.product?.price || 0).toFixed(2)} each</p>
+                              <p className="text-xs text-green-600 font-medium">₹{(item.price || 0).toFixed(2)} each</p>
                               <p className="text-xs text-gray-600">Qty: {item.quantity || 0}</p>
                               {/* Calculation */}
                               <div className="border-t border-green-200 pt-1 mt-2">
                                 <p className="text-xs text-gray-500">
-                                  {item.quantity || 0} × ₹{(item.product?.price || 0).toFixed(2)}
+                                  {item.quantity || 0} × ₹{(item.price || 0).toFixed(2)}
                                 </p>
                                 <p className="text-sm font-bold text-green-700">
-                                  ₹{((item.product?.price || 0) * (item.quantity || 0)).toFixed(2)}
+                                  ₹{((item.price || 0) * (item.quantity || 0)).toFixed(2)}
                                 </p>
                               </div>
                             </div>
@@ -624,10 +632,10 @@ export default function OrderDetailsPage() {
                           <tbody>
                             {orderData.products.map((item, idx) => (
                               <tr key={idx} className="border-b border-gray-100 hover:bg-green-50">
-                                <td className="px-2 py-2 truncate text-sm max-w-[160px]">{item.product?.name || 'Unknown Product'}</td>
-                                <td className="px-2 py-2 text-xs text-right">₹{(item.product?.price || 0).toFixed(2)}</td>
+                                <td className="px-2 py-2 truncate text-sm max-w-[160px]">{item.name || 'Unknown Product'}</td>
+                                <td className="px-2 py-2 text-xs text-right">₹{(item.price || 0).toFixed(2)}</td>
                                 <td className="px-2 py-2 text-xs text-right">{item.quantity || 0}</td>
-                                <td className="px-2 py-2 text-xs text-right font-bold text-green-700">₹{((item.product?.price || 0) * (item.quantity || 0)).toFixed(2)}</td>
+                                <td className="px-2 py-2 text-xs text-right font-bold text-green-700">₹{((item.price || 0) * (item.quantity || 0)).toFixed(2)}</td>
                               </tr>
                             ))}
                           </tbody>
