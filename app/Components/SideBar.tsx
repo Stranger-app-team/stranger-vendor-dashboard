@@ -62,6 +62,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
   const isAcceptedOrders = pathname === "/authenticated/accepted-order";
   const isAnalysis = pathname === "/authenticated/Analysis" || pathname === "/authenticated/analysis";
   const isInventory = pathname === "/authenticated/inventory";
+  const isPlaceOrder = pathname === "/authenticated/place-order";
 
     const fetchVendorData = () => {
     const userDataString = localStorage.getItem('userData');
@@ -285,12 +286,12 @@ const fetchAcceptedCount = async () => {
         </Link>
 
         <Link
-  href="/authenticated/add-product-form"
-  className={`${baseLinkClass} ${pathname === "/authenticated/add-product-form" ? activeClass : inactiveClass}`}
->
-  <Upload className="w-5 h-5" />
-  <span>Add Product</span>
-</Link>
+          href="/authenticated/add-product-form"
+          className={`${baseLinkClass} ${pathname === "/authenticated/add-product-form" ? activeClass : inactiveClass}`}
+        >
+          <Upload className="w-5 h-5" />
+          <span>Add Product</span>
+        </Link>
 
         <Link
           href="/authenticated/inventory"
@@ -309,6 +310,14 @@ const fetchAcceptedCount = async () => {
           <span>Analysis</span>
         </Link>
 
+          {/* place order */}
+          <Link
+          href="/authenticated/place-order"
+          className={`${baseLinkClass} ${isPlaceOrder ? activeClass : inactiveClass}`}
+          >
+            <ShoppingCart className="w-5 h-5" />
+            <span>Place Order</span>
+          </Link>
         {/* Notification Section */}
         <div className="relative" ref={notificationRef}>
           <button
