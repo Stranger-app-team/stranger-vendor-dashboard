@@ -34,7 +34,25 @@ interface VendorData {
   userId: string;
 }
 
-type TabType = "our" | "other";
+interface Transfer {
+  _id: string;
+  product: Product;
+  quantity: number;
+  requestedBy: {
+    name: string;
+    loginId: string;
+    mobileNumber: string;
+  };
+  requestedVendor: {
+    name: string;
+    loginId: string;
+    mobileNumber: string;
+  };
+  status: string;
+  requestedAt: string;
+}
+
+type TabType = "our" | "other" | "requests";
 
 export default function InventoryPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -46,6 +64,8 @@ export default function InventoryPage() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>("our");
+  const [stockRequests, setStockRequests] = useState<Transfer[]>([]);
+  const [requestsLoading, setRequestsLoading] = useState(false);
 
   // Stock Transfer State
   const [showTransferModal, setShowTransferModal] = useState(false);
@@ -97,8 +117,29 @@ export default function InventoryPage() {
   useEffect(() => {
     if (vendor?._id) {
       fetchProducts();
+      if (vendor.name === "Hshop Enterprises" || vendor.name === "GK Enterprises") {
+        fetchStockRequests();
+      }
     }
   }, [vendor]);
+
+  const fetchStockRequests = async () => {
+    if (!vendor?._id) return;
+    setRequestsLoading(true);
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/products/transfer?requestedVendor=${vendor._id}`
+      );
+      const data = await res.json();
+      console.log(data);
+      setStockRequests(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Failed to fetch stock requests:", err);
+      setStockRequests([]);
+    } finally {
+      setRequestsLoading(false);
+    }
+  };
 
   const fetchProducts = async () => {
     if (!vendor?._id) return;
@@ -264,11 +305,20 @@ export default function InventoryPage() {
 
     setTransferring(true);
     try {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        alert("Authentication token not found. Please log in again.");
+        return;
+      }
+
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/products/${transferProduct}/transfer`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
           body: JSON.stringify({
             quantity: Number(transferQuantity),
             requestedVendor: selectedProd.vendor._id
@@ -291,6 +341,36 @@ export default function InventoryPage() {
       alert("Failed to create transfer request");
     } finally {
       setTransferring(false);
+    }
+  };
+
+  const handleUpdateStatus = async (transferId: string, newStatus: string) => {
+    // Confirmation for critical actions
+    if (newStatus === 'cancelled' || newStatus === 'delivered') {
+      if (!confirm(`Are you sure you want to mark this request as ${newStatus}?`)) return;
+    }
+
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/products/transfer/${transferId}/status`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ status: newStatus }),
+        }
+      );
+
+      if (res.ok) {
+        await fetchStockRequests();
+      } else {
+        const error = await res.json();
+        alert(error.message || "Failed to update status");
+      }
+    } catch (err) {
+      console.error("Error updating status:", err);
+      alert("Failed to update status");
     }
   };
 
@@ -391,190 +471,339 @@ export default function InventoryPage() {
           >
             Other Products ({otherProducts.length})
           </button>
+
+          {(vendor?.name === "Hshop Enterprises" || vendor?.name === "GK Enterprises") && (
+            <button
+              onClick={() => setActiveTab("requests")}
+              className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${activeTab === "requests"
+                ? "border-teal-600 text-teal-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+            >
+              Stock Requests ({stockRequests.length})
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Products Table */}
-      {loading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
-        </div>
-      ) : filteredProducts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-          <Package className="w-16 h-16 mb-4 text-gray-300" />
-          <p className="text-lg font-medium">No products found</p>
-          <p className="text-sm">
-            {searchQuery
-              ? "Try a different search term"
-              : `No ${activeTab === "our" ? "our" : "other"} products in inventory`}
-          </p>
-        </div>
-      ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Product
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Category
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Price
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Stock
-                  </th>
-                  {vendor?.name === "Hshop Enterprises" && (
+      {activeTab === "requests" ? (
+        requestsLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
+          </div>
+        ) : stockRequests.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+            <Package className="w-16 h-16 mb-4 text-gray-300" />
+            <p className="text-lg font-medium">No stock requests found</p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      KK Stock
+                      Product
                     </th>
-                  )}
-                  {activeTab === "our" && (
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Requested By
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Quantity
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Actions
                     </th>
-                  )}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredProducts.map((product) => {
-                  const isOurProduct = product.vendor?._id === vendor?._id;
-
-                  return (
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {stockRequests.map((request) => (
                     <tr
-                      key={product._id}
-                      onClick={() => handleRowClick(product)}
-                      className={`hover:bg-gray-50 transition-colors cursor-pointer ${!isOurProduct ? "bg-gray-50/50" : ""
-                        }`}
+                      key={request._id}
+                      className="hover:bg-gray-50 transition-colors"
                     >
-                      {/* Product Info */}
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                            {product.image ? (
+                          <div className="w-10 h-10 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                            {request.product?.image ? (
                               <img
-                                src={product.image}
-                                alt={product.name}
+                                src={request.product.image}
+                                alt={request.product.name}
                                 className="w-full h-full object-cover"
                               />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center">
-                                <Package className="w-6 h-6 text-gray-300" />
+                                <Package className="w-5 h-5 text-gray-300" />
                               </div>
                             )}
                           </div>
-                          <div className="min-w-0">
-                            <p className={`font-medium truncate max-w-[200px] ${isOurProduct ? "text-gray-800" : "text-gray-600"
-                              }`}>
-                              {product.name}
+                          <div>
+                            <p className="font-medium text-gray-800 text-sm">
+                              {request.product?.name || "Unknown Product"}
                             </p>
-                            <p className="text-sm text-gray-500 truncate max-w-[200px]">
-                              {product.description || "No description"}
+                            <p className="text-xs text-gray-500">
+                              ₹{request.product?.price}
                             </p>
                           </div>
                         </div>
                       </td>
-
-                      {/* Category */}
                       <td className="px-4 py-3">
-                        <span className={`text-xs px-2 py-1 rounded-full ${isOurProduct
-                          ? "bg-gray-100 text-gray-600"
-                          : "bg-gray-200 text-gray-500"
+                        <p className="text-sm font-medium text-gray-800">
+                          {request.requestedBy?.name || "Unknown"}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {request.requestedBy?.mobileNumber}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          To: {request.requestedVendor?.name}
+                        </p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="font-semibold text-teal-600 text-sm">
+                          {request.quantity}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`text-xs px-2 py-1 rounded-full capitalize ${request.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                          request.status === 'approved' ? 'bg-green-100 text-green-700' :
+                            'bg-red-100 text-red-700'
                           }`}>
-                          {product.category || "Uncategorized"}
+                          {request.status || 'pending'}
                         </span>
                       </td>
-
-                      {/* Price */}
-                      <td className="px-4 py-3">
-                        {isOurProduct ? (
-                          <span className="font-semibold text-teal-600">
-                            ₹{product.price}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400 italic text-sm">
-                            Hidden
-                          </span>
-                        )}
+                      <td className="px-4 py-3 text-sm text-gray-500">
+                        {new Date(request.requestedAt).toLocaleDateString()}
                       </td>
-
-                      {/* Stock */}
                       <td className="px-4 py-3">
-                        <span
-                          className={`font-semibold ${product.stock > 10
-                            ? isOurProduct ? "text-green-600" : "text-green-500"
-                            : product.stock > 0
-                              ? isOurProduct ? "text-yellow-500" : "text-yellow-400"
-                              : isOurProduct ? "text-red-600" : "text-red-500"
-                            }`}
-                        >
-                          {product.stock}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          {request.status === 'pending' && (
+                            <>
+                              <button
+                                onClick={() => handleUpdateStatus(request._id, 'in_transit')}
+                                className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-medium rounded-lg hover:bg-blue-100 transition-colors"
+                              >
+                                Dispatch
+                              </button>
+                              <button
+                                onClick={() => handleUpdateStatus(request._id, 'cancelled')}
+                                className="px-3 py-1 bg-red-50 text-red-600 text-xs font-medium rounded-lg hover:bg-red-100 transition-colors"
+                              >
+                                Reject
+                              </button>
+                            </>
+                          )}
+                          {request.status === 'in_transit' && (
+                            <button
+                              onClick={() => handleUpdateStatus(request._id, 'delivered')}
+                              className="px-3 py-1 bg-green-50 text-green-600 text-xs font-medium rounded-lg hover:bg-green-100 transition-colors"
+                            >
+                              Mark Delivered
+                            </button>
+                          )}
+                          {(request.status === 'delivered' || request.status === 'cancelled') && (
+                            <span className="text-xs text-gray-400 italic">
+                              No actions
+                            </span>
+                          )}
+                        </div>
                       </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )
+      ) : (
 
-                      {/* KK Stock - Separate Column (only for Hshop Enterprises) */}
-                      {vendor?.name === "Hshop Enterprises" && (
+        /* Products Table */
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          {loading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+              <Package className="w-16 h-16 mb-4 text-gray-300" />
+              <p className="text-lg font-medium">No products found</p>
+              <p className="text-sm">
+                {searchQuery
+                  ? "Try a different search term"
+                  : `No ${activeTab === "our" ? "our" : "other"} products in inventory`}
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Product
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Category
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Price
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Stock
+                    </th>
+                    {vendor?.name === "Hshop Enterprises" && (
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        KK Stock
+                      </th>
+                    )}
+                    {activeTab === "our" && (
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredProducts.map((product) => {
+                    const isOurProduct = product.vendor?._id === vendor?._id;
+
+                    return (
+                      <tr
+                        key={product._id}
+                        onClick={() => handleRowClick(product)}
+                        className={`hover:bg-gray-50 transition-colors cursor-pointer ${!isOurProduct ? "bg-gray-50/50" : ""
+                          }`}
+                      >
+                        {/* Product Info */}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                              {product.image ? (
+                                <img
+                                  src={product.image}
+                                  alt={product.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <Package className="w-6 h-6 text-gray-300" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <p className={`font-medium truncate max-w-[200px] ${isOurProduct ? "text-gray-800" : "text-gray-600"
+                                }`}>
+                                {product.name}
+                              </p>
+                              <p className="text-sm text-gray-500 truncate max-w-[200px]">
+                                {product.description || "No description"}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Category */}
+                        <td className="px-4 py-3">
+                          <span className={`text-xs px-2 py-1 rounded-full ${isOurProduct
+                            ? "bg-gray-100 text-gray-600"
+                            : "bg-gray-200 text-gray-500"
+                            }`}>
+                            {product.category || "Uncategorized"}
+                          </span>
+                        </td>
+
+                        {/* Price */}
                         <td className="px-4 py-3">
                           {isOurProduct ? (
-                            <span
-                              className={`font-semibold ${product.kk_stock > 10
-                                ? "text-green-600"
-                                : product.kk_stock > 0
-                                  ? "text-yellow-500"
-                                  : "text-red-600"
-                                }`}
-                            >
-                              {product.kk_stock}
+                            <span className="font-semibold text-teal-600">
+                              ₹{product.price}
                             </span>
                           ) : (
                             <span className="text-gray-400 italic text-sm">
-                              -
+                              Hidden
                             </span>
                           )}
                         </td>
-                      )}
 
-                      {/* Actions - Only for Our Products */}
-                      {activeTab === "our" && (
+                        {/* Stock */}
                         <td className="px-4 py-3">
-                          <div className="flex justify-end gap-2">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openEditModal(product);
-                              }}
-                              className="p-2 text-gray-500 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
-                              title="Edit"
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDelete(product._id);
-                              }}
-                              disabled={deleting === product._id}
-                              className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                              title="Delete"
-                            >
-                              {deleting === product._id ? (
-                                <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
-                              ) : (
-                                <Trash2 className="w-4 h-4" />
-                              )}
-                            </button>
-                          </div>
+                          <span
+                            className={`font-semibold ${product.stock > 10
+                              ? isOurProduct ? "text-green-600" : "text-green-500"
+                              : product.stock > 0
+                                ? isOurProduct ? "text-yellow-500" : "text-yellow-400"
+                                : isOurProduct ? "text-red-600" : "text-red-500"
+                              }`}
+                          >
+                            {product.stock}
+                          </span>
                         </td>
-                      )}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+
+                        {/* KK Stock - Separate Column (only for Hshop Enterprises) */}
+                        {vendor?.name === "Hshop Enterprises" && (
+                          <td className="px-4 py-3">
+                            {isOurProduct ? (
+                              <span
+                                className={`font-semibold ${product.kk_stock > 10
+                                  ? "text-green-600"
+                                  : product.kk_stock > 0
+                                    ? "text-yellow-500"
+                                    : "text-red-600"
+                                  }`}
+                              >
+                                {product.kk_stock}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400 italic text-sm">
+                                -
+                              </span>
+                            )}
+                          </td>
+                        )}
+
+                        {/* Actions - Only for Our Products */}
+                        {activeTab === "our" && (
+                          <td className="px-4 py-3">
+                            <div className="flex justify-end gap-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openEditModal(product);
+                                }}
+                                className="p-2 text-gray-500 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
+                                title="Edit"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDelete(product._id);
+                                }}
+                                disabled={deleting === product._id}
+                                className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                                title="Delete"
+                              >
+                                {deleting === product._id ? (
+                                  <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                  <Trash2 className="w-4 h-4" />
+                                )}
+                              </button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
