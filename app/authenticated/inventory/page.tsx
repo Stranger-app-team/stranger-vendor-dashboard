@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Pencil, Trash2, X, Search, Package } from "lucide-react";
+import { Pencil, Trash2, X, Search, Package, ArrowRightLeft } from "lucide-react";
 
 interface Product {
   kk_stock: number;
@@ -47,6 +47,12 @@ export default function InventoryPage() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>("our");
 
+  // Stock Transfer State
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferProduct, setTransferProduct] = useState("");
+  const [transferQuantity, setTransferQuantity] = useState("");
+  const [transferring, setTransferring] = useState(false);
+
   // Stock ledger state
   const [showLedgerModal, setShowLedgerModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -62,6 +68,7 @@ export default function InventoryPage() {
     price: "",
     category: "",
     stock: "",
+    kk_stock: "",
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -176,6 +183,7 @@ export default function InventoryPage() {
       price: "",
       category: "",
       stock: "",
+      kk_stock: "",
     });
     setImageFile(null);
     setImagePreview(null);
@@ -190,6 +198,7 @@ export default function InventoryPage() {
       price: product.price.toString(),
       category: product.category || "",
       stock: product.stock.toString(),
+      kk_stock: product.kk_stock ? product.kk_stock.toString() : "",
     });
     setImagePreview(product.image || null);
     setImageFile(null);
@@ -213,6 +222,7 @@ export default function InventoryPage() {
       formDataToSend.append("price", formData.price);
       formDataToSend.append("category", formData.category);
       formDataToSend.append("stock", formData.stock);
+      formDataToSend.append("kk_stock", formData.kk_stock);
 
       if (imageFile) {
         formDataToSend.append("image", imageFile);
@@ -238,6 +248,49 @@ export default function InventoryPage() {
       alert("Failed to update product");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleTransferSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!transferProduct || !transferQuantity) return;
+
+    // Find selected product to get vendor
+    const selectedProd = products.find(p => p._id === transferProduct);
+    if (!selectedProd || !selectedProd.vendor) {
+      alert("Selected product or vendor not found");
+      return;
+    }
+
+    setTransferring(true);
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/products/${transferProduct}/transfer`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            quantity: Number(transferQuantity),
+            requestedVendor: selectedProd.vendor._id
+          }),
+        }
+      );
+
+      if (res.ok) {
+        alert("Stock transfer request created successfully");
+        setShowTransferModal(false);
+        setTransferProduct("");
+        setTransferQuantity("");
+        await fetchProducts();
+      } else {
+        const error = await res.json();
+        alert(error.message || "Failed to create transfer request");
+      }
+    } catch (err) {
+      console.error("Error creating transfer:", err);
+      alert("Failed to create transfer request");
+    } finally {
+      setTransferring(false);
     }
   };
 
@@ -294,16 +347,26 @@ export default function InventoryPage() {
           </p>
         </div>
 
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <input
-            type="text"
-            placeholder="Search products..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent w-full sm:w-64"
-          />
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowTransferModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm font-medium shadow-sm"
+          >
+            <ArrowRightLeft className="w-4 h-4" />
+            Request Stock
+          </button>
+
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Search products..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent w-full sm:w-64"
+            />
+          </div>
         </div>
       </div>
 
@@ -312,21 +375,19 @@ export default function InventoryPage() {
         <div className="flex gap-4">
           <button
             onClick={() => setActiveTab("our")}
-            className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === "our"
-                ? "border-teal-600 text-teal-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
+            className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${activeTab === "our"
+              ? "border-teal-600 text-teal-600"
+              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
           >
             Our Products ({ourProducts.length})
           </button>
           <button
             onClick={() => setActiveTab("other")}
-            className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === "other"
-                ? "border-teal-600 text-teal-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
+            className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${activeTab === "other"
+              ? "border-teal-600 text-teal-600"
+              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
           >
             Other Products ({otherProducts.length})
           </button>
@@ -381,14 +442,13 @@ export default function InventoryPage() {
               <tbody className="divide-y divide-gray-100">
                 {filteredProducts.map((product) => {
                   const isOurProduct = product.vendor?._id === vendor?._id;
-                  
+
                   return (
                     <tr
                       key={product._id}
                       onClick={() => handleRowClick(product)}
-                      className={`hover:bg-gray-50 transition-colors cursor-pointer ${
-                        !isOurProduct ? "bg-gray-50/50" : ""
-                      }`}
+                      className={`hover:bg-gray-50 transition-colors cursor-pointer ${!isOurProduct ? "bg-gray-50/50" : ""
+                        }`}
                     >
                       {/* Product Info */}
                       <td className="px-4 py-3">
@@ -407,9 +467,8 @@ export default function InventoryPage() {
                             )}
                           </div>
                           <div className="min-w-0">
-                            <p className={`font-medium truncate max-w-[200px] ${
-                              isOurProduct ? "text-gray-800" : "text-gray-600"
-                            }`}>
+                            <p className={`font-medium truncate max-w-[200px] ${isOurProduct ? "text-gray-800" : "text-gray-600"
+                              }`}>
                               {product.name}
                             </p>
                             <p className="text-sm text-gray-500 truncate max-w-[200px]">
@@ -421,11 +480,10 @@ export default function InventoryPage() {
 
                       {/* Category */}
                       <td className="px-4 py-3">
-                        <span className={`text-xs px-2 py-1 rounded-full ${
-                          isOurProduct
-                            ? "bg-gray-100 text-gray-600"
-                            : "bg-gray-200 text-gray-500"
-                        }`}>
+                        <span className={`text-xs px-2 py-1 rounded-full ${isOurProduct
+                          ? "bg-gray-100 text-gray-600"
+                          : "bg-gray-200 text-gray-500"
+                          }`}>
                           {product.category || "Uncategorized"}
                         </span>
                       </td>
@@ -446,13 +504,12 @@ export default function InventoryPage() {
                       {/* Stock */}
                       <td className="px-4 py-3">
                         <span
-                          className={`font-semibold ${
-                            product.stock > 10
-                              ? isOurProduct ? "text-green-600" : "text-green-500"
-                              : product.stock > 0
+                          className={`font-semibold ${product.stock > 10
+                            ? isOurProduct ? "text-green-600" : "text-green-500"
+                            : product.stock > 0
                               ? isOurProduct ? "text-yellow-500" : "text-yellow-400"
                               : isOurProduct ? "text-red-600" : "text-red-500"
-                          }`}
+                            }`}
                         >
                           {product.stock}
                         </span>
@@ -463,13 +520,12 @@ export default function InventoryPage() {
                         <td className="px-4 py-3">
                           {isOurProduct ? (
                             <span
-                              className={`font-semibold ${
-                                product.kk_stock > 10
-                                  ? "text-green-600"
-                                  : product.kk_stock > 0
+                              className={`font-semibold ${product.kk_stock > 10
+                                ? "text-green-600"
+                                : product.kk_stock > 0
                                   ? "text-yellow-500"
                                   : "text-red-600"
-                              }`}
+                                }`}
                             >
                               {product.kk_stock}
                             </span>
@@ -600,6 +656,23 @@ export default function InventoryPage() {
                 </div>
               </div>
 
+              {vendor?.name === "Hshop Enterprises" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    KK Stock
+                  </label>
+                  <input
+                    type="number"
+                    name="kk_stock"
+                    value={formData.kk_stock}
+                    onChange={handleInputChange}
+                    min="0"
+                    className="w-full px-3 py-2 border border-gray-300 text-black rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    placeholder="0"
+                  />
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Category *
@@ -647,6 +720,94 @@ export default function InventoryPage() {
       {showLedgerModal && selectedProduct && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           {/* Your existing ledger modal code here */}
+        </div>
+      )}
+
+      {/* Transfer Modal */}
+      {showTransferModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-lg font-semibold text-gray-800">Request Stock Transfer</h2>
+              <button
+                onClick={() => {
+                  setShowTransferModal(false);
+                  setTransferProduct("");
+                  setTransferQuantity("");
+                }}
+                className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            <form onSubmit={handleTransferSubmit} className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Select Product *
+                </label>
+                <select
+                  value={transferProduct}
+                  onChange={(e) => setTransferProduct(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 text-black rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
+                >
+                  <option value="">Select a product</option>
+                  {otherProducts.map((p) => (
+                    <option key={p._id} value={p._id}>
+                      {p.name} - {p.vendor?.name} (Stock: {p.stock})
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-gray-500">
+                  Only products from other vendors are available for request.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Quantity *
+                </label>
+                <input
+                  type="number"
+                  value={transferQuantity}
+                  onChange={(e) => setTransferQuantity(e.target.value)}
+                  required
+                  min="1"
+                  className="w-full px-3 py-2 border border-gray-300 text-black rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  placeholder="Enter quantity needed"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowTransferModal(false);
+                    setTransferProduct("");
+                    setTransferQuantity("");
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={transferring}
+                  className="flex-1 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {transferring ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Requesting...
+                    </span>
+                  ) : (
+                    "Submit Request"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
