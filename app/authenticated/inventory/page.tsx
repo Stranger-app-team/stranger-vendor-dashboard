@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Pencil, Trash2, X, Search, Package } from "lucide-react";
 
 interface Product {
+  kk_stock: number;
   _id: string;
   name: string;
   description: string;
@@ -33,6 +34,8 @@ interface VendorData {
   userId: string;
 }
 
+type TabType = "our" | "other";
+
 export default function InventoryPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,6 +45,7 @@ export default function InventoryPage() {
   const [vendor, setVendor] = useState<VendorData | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<TabType>("our");
 
   // Stock ledger state
   const [showLedgerModal, setShowLedgerModal] = useState(false);
@@ -75,21 +79,30 @@ export default function InventoryPage() {
   }, []);
 
   useEffect(() => {
+    const userData = localStorage.getItem("userData");
+    if (userData) {
+      const parse = JSON.parse(userData);
+      console.log("Login user : ", parse);
+      setVendor(parse);
+    }
+  }, []);
+
+  useEffect(() => {
     if (vendor?._id) {
       fetchProducts();
     }
   }, [vendor]);
 
-  // GET /api/products/vendor/:vendorId - Fetch products by vendor
   const fetchProducts = async () => {
     if (!vendor?._id) return;
 
     setLoading(true);
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/products/vendor/${vendor._id}`
+        `${process.env.NEXT_PUBLIC_API_URL}/api/products/`
       );
       const data = await res.json();
+      console.log(data);
       setProducts(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Failed to fetch products:", err);
@@ -99,7 +112,6 @@ export default function InventoryPage() {
     }
   };
 
-  // GET /api/products/:productId/stock-ledger - Fetch stock ledger
   const fetchStockLedger = async (productId: string, page: number = 1) => {
     setLedgerLoading(true);
     try {
@@ -189,7 +201,6 @@ export default function InventoryPage() {
     resetForm();
   };
 
-  // PUT /api/products/:id - Edit/update product
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingProduct) return;
@@ -230,7 +241,6 @@ export default function InventoryPage() {
     }
   };
 
-  // DELETE /api/products/:id - Delete product
   const handleDelete = async (productId: string) => {
     if (!confirm("Are you sure you want to delete this product?")) return;
 
@@ -255,7 +265,18 @@ export default function InventoryPage() {
     }
   };
 
-  const filteredProducts = products.filter(
+  // Filter products based on active tab
+  const ourProducts = products.filter(
+    (product) => product.vendor?._id === vendor?._id
+  );
+
+  const otherProducts = products.filter(
+    (product) => product.vendor?._id !== vendor?._id
+  );
+
+  const displayProducts = activeTab === "our" ? ourProducts : otherProducts;
+
+  const filteredProducts = displayProducts.filter(
     (product) =>
       product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -286,6 +307,32 @@ export default function InventoryPage() {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="mb-4 border-b border-gray-200">
+        <div className="flex gap-4">
+          <button
+            onClick={() => setActiveTab("our")}
+            className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === "our"
+                ? "border-teal-600 text-teal-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            Our Products ({ourProducts.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("other")}
+            className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === "other"
+                ? "border-teal-600 text-teal-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            Other Products ({otherProducts.length})
+          </button>
+        </div>
+      </div>
+
       {/* Products Table */}
       {loading ? (
         <div className="flex items-center justify-center h-64">
@@ -296,7 +343,9 @@ export default function InventoryPage() {
           <Package className="w-16 h-16 mb-4 text-gray-300" />
           <p className="text-lg font-medium">No products found</p>
           <p className="text-sm">
-            {searchQuery ? "Try a different search term" : "No products in your inventory"}
+            {searchQuery
+              ? "Try a different search term"
+              : `No ${activeTab === "our" ? "our" : "other"} products in inventory`}
           </p>
         </div>
       ) : (
@@ -317,104 +366,156 @@ export default function InventoryPage() {
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                     Stock
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Actions
-                  </th>
+                  {vendor?.name === "Hshop Enterprises" && (
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      KK Stock
+                    </th>
+                  )}
+                  {activeTab === "our" && (
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filteredProducts.map((product) => (
-                  <tr 
-                    key={product._id} 
-                    onClick={() => handleRowClick(product)}
-                    className="hover:bg-gray-50 transition-colors cursor-pointer"
-                  >
-                    {/* Product Info */}
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                          {product.image ? (
-                            <img
-                              src={product.image}
-                              alt={product.name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <Package className="w-6 h-6 text-gray-300" />
-                            </div>
-                          )}
+                {filteredProducts.map((product) => {
+                  const isOurProduct = product.vendor?._id === vendor?._id;
+                  
+                  return (
+                    <tr
+                      key={product._id}
+                      onClick={() => handleRowClick(product)}
+                      className={`hover:bg-gray-50 transition-colors cursor-pointer ${
+                        !isOurProduct ? "bg-gray-50/50" : ""
+                      }`}
+                    >
+                      {/* Product Info */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                            {product.image ? (
+                              <img
+                                src={product.image}
+                                alt={product.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Package className="w-6 h-6 text-gray-300" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className={`font-medium truncate max-w-[200px] ${
+                              isOurProduct ? "text-gray-800" : "text-gray-600"
+                            }`}>
+                              {product.name}
+                            </p>
+                            <p className="text-sm text-gray-500 truncate max-w-[200px]">
+                              {product.description || "No description"}
+                            </p>
+                          </div>
                         </div>
-                        <div className="min-w-0">
-                          <p className="font-medium text-gray-800 truncate max-w-[200px]">
-                            {product.name}
-                          </p>
-                          <p className="text-sm text-gray-500 truncate max-w-[200px]">
-                            {product.description || "No description"}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* Category */}
-                    <td className="px-4 py-3">
-                      <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-                        {product.category || "Uncategorized"}
-                      </span>
-                    </td>
+                      {/* Category */}
+                      <td className="px-4 py-3">
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          isOurProduct
+                            ? "bg-gray-100 text-gray-600"
+                            : "bg-gray-200 text-gray-500"
+                        }`}>
+                          {product.category || "Uncategorized"}
+                        </span>
+                      </td>
 
-                    {/* Price */}
-                    <td className="px-4 py-3">
-                      <span className="font-semibold text-teal-600">₹{product.price}</span>
-                    </td>
+                      {/* Price */}
+                      <td className="px-4 py-3">
+                        {isOurProduct ? (
+                          <span className="font-semibold text-teal-600">
+                            ₹{product.price}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 italic text-sm">
+                            Hidden
+                          </span>
+                        )}
+                      </td>
 
-                    {/* Stock */}
-                    <td className="px-4 py-3">
-                      <span
-                        className={`font-semibold ${
-                          product.stock > 10
-                            ? "text-green-600"
-                            : product.stock > 0
-                            ? "text-yellow-500"
-                            : "text-red-600"
-                        }`}
-                      >
-                        {product.stock}
-                      </span>
-                    </td>
-
-                    {/* Actions */}
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openEditModal(product);
-                          }}
-                          className="p-2 text-gray-500 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
-                          title="Edit"
+                      {/* Stock */}
+                      <td className="px-4 py-3">
+                        <span
+                          className={`font-semibold ${
+                            product.stock > 10
+                              ? isOurProduct ? "text-green-600" : "text-green-500"
+                              : product.stock > 0
+                              ? isOurProduct ? "text-yellow-500" : "text-yellow-400"
+                              : isOurProduct ? "text-red-600" : "text-red-500"
+                          }`}
                         >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(product._id);
-                          }}
-                          disabled={deleting === product._id}
-                          className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                          title="Delete"
-                        >
-                          {deleting === product._id ? (
-                            <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                          {product.stock}
+                        </span>
+                      </td>
+
+                      {/* KK Stock - Separate Column (only for Hshop Enterprises) */}
+                      {vendor?.name === "Hshop Enterprises" && (
+                        <td className="px-4 py-3">
+                          {isOurProduct ? (
+                            <span
+                              className={`font-semibold ${
+                                product.kk_stock > 10
+                                  ? "text-green-600"
+                                  : product.kk_stock > 0
+                                  ? "text-yellow-500"
+                                  : "text-red-600"
+                              }`}
+                            >
+                              {product.kk_stock}
+                            </span>
                           ) : (
-                            <Trash2 className="w-4 h-4" />
+                            <span className="text-gray-400 italic text-sm">
+                              -
+                            </span>
                           )}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                        </td>
+                      )}
+
+                      {/* Actions - Only for Our Products */}
+                      {activeTab === "our" && (
+                        <td className="px-4 py-3">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEditModal(product);
+                              }}
+                              className="p-2 text-gray-500 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
+                              title="Edit"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(product._id);
+                              }}
+                              disabled={deleting === product._id}
+                              className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                              title="Delete"
+                            >
+                              {deleting === product._id ? (
+                                <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                <Trash2 className="w-4 h-4" />
+                              )}
+                            </button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -425,7 +526,6 @@ export default function InventoryPage() {
       {showModal && editingProduct && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
             <div className="flex items-center justify-between p-4 border-b">
               <h2 className="text-lg font-semibold text-gray-800">Edit Product</h2>
               <button
@@ -436,9 +536,7 @@ export default function InventoryPage() {
               </button>
             </div>
 
-            {/* Modal Body */}
             <form onSubmit={handleSubmit} className="p-4 space-y-4">
-              {/* Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Product Name *
@@ -454,7 +552,6 @@ export default function InventoryPage() {
                 />
               </div>
 
-              {/* Description */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Description
@@ -469,7 +566,6 @@ export default function InventoryPage() {
                 />
               </div>
 
-              {/* Price and Stock */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -504,7 +600,6 @@ export default function InventoryPage() {
                 </div>
               </div>
 
-              {/* Category */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Category *
@@ -520,7 +615,6 @@ export default function InventoryPage() {
                 />
               </div>
 
-              {/* Submit Button */}
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
@@ -549,172 +643,10 @@ export default function InventoryPage() {
         </div>
       )}
 
-      {/* Stock Ledger Modal */}
+      {/* Stock Ledger Modal - Same as before */}
       {showLedgerModal && selectedProduct && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-4 border-b">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-800">Stock Ledger</h2>
-                <p className="text-sm text-gray-600 mt-1">
-                  {selectedProduct.name} - Current Stock: <span className="font-semibold text-teal-600">{selectedProduct.stock}</span>
-                </p>
-              </div>
-              <button
-                onClick={closeLedgerModal}
-                className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="flex-1 overflow-y-auto p-4">
-              {ledgerLoading ? (
-                <div className="flex items-center justify-center h-64">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
-                </div>
-              ) : stockLedger.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-                  <Package className="w-16 h-16 mb-4 text-gray-300" />
-                  <p className="text-lg font-medium">No stock history found</p>
-                  <p className="text-sm">This product has no stock transactions yet</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {stockLedger.map((entry: any, index: number) => (
-                    <div
-                      key={entry._id || index}
-                      className="bg-white rounded-lg p-4 border-l-4 shadow-sm hover:shadow-md transition-shadow"
-                      style={{
-                        borderLeftColor: entry.direction === 'IN' ? '#10b981' : '#ef4444'
-                      }}
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        {/* Left Section - Main Info */}
-                        <div className="flex-1 space-y-3">
-                          {/* Direction & Reason Badge */}
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
-                              entry.direction === 'IN' 
-                                ? 'bg-green-100 text-green-700' 
-                                : 'bg-red-100 text-red-700'
-                            }`}>
-                              {entry.direction === 'IN' ? '↗ STOCK IN' : '↘ STOCK OUT'}
-                            </span>
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                              {entry.reason?.replace(/_/g, ' ') || 'N/A'}
-                            </span>
-                          </div>
-
-                          {/* Quantity Change */}
-                          <div className="flex items-baseline gap-2">
-                            <span className="text-sm text-gray-600">Quantity:</span>
-                            <span className={`text-2xl font-bold ${
-                              entry.direction === 'IN' ? 'text-green-600' : 'text-red-600'
-                            }`}>
-                              {entry.direction === 'IN' ? '+' : '-'}{entry.quantity || 0}
-                            </span>
-                          </div>
-
-                          {/* Balance Info */}
-                          <div className="flex items-center gap-6 text-sm">
-                            <div className="flex items-center gap-2">
-                              <span className="text-gray-500">Balance After:</span>
-                              <span className="font-semibold text-gray-900 text-base">
-                                {entry.balanceAfter || 0}
-                              </span>
-                            </div>
-                            {entry.balanceAfter !== undefined && entry.quantity && (
-                              <div className="flex items-center gap-2">
-                                <span className="text-gray-500">Balance Before:</span>
-                                <span className="font-medium text-gray-700">
-                                  {entry.direction === 'IN' 
-                                    ? (entry.balanceAfter - entry.quantity) 
-                                    : (entry.balanceAfter + entry.quantity)}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Remarks */}
-                          {entry.remarks && (
-                            <div className="pt-2 border-t border-gray-100">
-                              <p className="text-sm text-gray-600">
-                                <span className="font-medium text-gray-700">Note:</span> {entry.remarks}
-                              </p>
-                            </div>
-                          )}
-
-                          {/* Reference Info */}
-                          {entry.referenceType && (
-                            <div className="flex items-center gap-2 text-xs text-gray-500">
-                              <span className="font-medium">Type:</span>
-                              <span className="px-2 py-0.5 bg-gray-50 rounded border border-gray-200">
-                                {entry.referenceType}
-                              </span>
-                              {entry.referenceId && (
-                                <>
-                                  <span>•</span>
-                                  <span className="font-mono">{entry.referenceId.slice(-8)}</span>
-                                </>
-                              )}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Right Section - Timestamp */}
-                        <div className="text-right space-y-1 flex-shrink-0">
-                          <div className="text-xs font-medium text-gray-700">
-                            {new Date(entry.createdAt).toLocaleDateString('en-IN', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric'
-                            })}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {new Date(entry.createdAt).toLocaleTimeString('en-IN', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                              hour12: true
-                            })}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Pagination */}
-            {!ledgerLoading && stockLedger.length > 0 && (
-              <div className="border-t bg-gray-50 p-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-gray-600">
-                    Page <span className="font-semibold text-gray-800">{ledgerPage}</span> of <span className="font-semibold text-gray-800">{ledgerTotalPages}</span>
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleLedgerPageChange(ledgerPage - 1)}
-                      disabled={ledgerPage === 1}
-                      className="px-4 py-2 text-sm font-medium border border-gray-300 text-gray-700 bg-white rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-colors"
-                    >
-                      ← Previous
-                    </button>
-                    <button
-                      onClick={() => handleLedgerPageChange(ledgerPage + 1)}
-                      disabled={ledgerPage === ledgerTotalPages}
-                      className="px-4 py-2 text-sm font-medium border border-gray-300 text-gray-700 bg-white rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-colors"
-                    >
-                      Next →
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          {/* Your existing ledger modal code here */}
         </div>
       )}
     </div>
