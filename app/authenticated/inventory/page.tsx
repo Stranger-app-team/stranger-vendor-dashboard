@@ -354,7 +354,7 @@ export default function InventoryPage() {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/products/transfer/${transferId}/status`,
         {
-          method: "PUT",
+          method: "PATCH",
           headers: {
             "Content-Type": "application/json",
           },
@@ -505,9 +505,7 @@ export default function InventoryPage() {
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Product
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      Requested By
-                    </th>
+
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Quantity
                     </th>
@@ -553,17 +551,7 @@ export default function InventoryPage() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
-                        <p className="text-sm font-medium text-gray-800">
-                          {request.requestedBy?.name || "Unknown"}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {request.requestedBy?.mobileNumber}
-                        </p>
-                        <p className="text-xs text-gray-400 mt-1">
-                          To: {request.requestedVendor?.name}
-                        </p>
-                      </td>
+
                       <td className="px-4 py-3">
                         <span className="font-semibold text-teal-600 text-sm">
                           {request.quantity}
