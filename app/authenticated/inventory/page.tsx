@@ -428,6 +428,7 @@ export default function InventoryPage() {
         </div>
 
         <div className="flex items-center gap-3">
+         {vendor?.name === "GK Enterprises" && (
           <button
             onClick={() => setShowTransferModal(true)}
             className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm font-medium shadow-sm"
@@ -435,6 +436,7 @@ export default function InventoryPage() {
             <ArrowRightLeft className="w-4 h-4" />
             Request Stock
           </button>
+          )}
 
           {/* Search */}
           <div className="relative">
@@ -933,10 +935,172 @@ export default function InventoryPage() {
         </div>
       )}
 
-      {/* Stock Ledger Modal - Same as before */}
+      {/* Stock Ledger Modal */}
       {showLedgerModal && selectedProduct && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          {/* Your existing ledger modal code here */}
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-800">Stock Ledger</h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  {selectedProduct.name} - Current Stock: <span className="font-semibold text-teal-600">{selectedProduct.stock}</span>
+                </p>
+              </div>
+              <button
+                onClick={closeLedgerModal}
+                className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {ledgerLoading ? (
+                <div className="flex items-center justify-center h-64">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
+                </div>
+              ) : stockLedger.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+                  <Package className="w-16 h-16 mb-4 text-gray-300" />
+                  <p className="text-lg font-medium">No stock history found</p>
+                  <p className="text-sm">This product has no stock transactions yet</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {stockLedger.map((entry: any, index: number) => (
+                    <div
+                      key={entry._id || index}
+                      className="bg-white rounded-lg p-4 border-l-4 shadow-sm hover:shadow-md transition-shadow"
+                      style={{
+                        borderLeftColor: entry.direction === 'IN' ? '#10b981' : '#ef4444'
+                      }}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        {/* Left Section - Main Info */}
+                        <div className="flex-1 space-y-3">
+                          {/* Direction & Reason Badge */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
+                              entry.direction === 'IN' 
+                                ? 'bg-green-100 text-green-700' 
+                                : 'bg-red-100 text-red-700'
+                            }`}>
+                              {entry.direction === 'IN' ? '↗ STOCK IN' : '↘ STOCK OUT'}
+                            </span>
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                              {entry.reason?.replace(/_/g, ' ') || 'N/A'}
+                            </span>
+                          </div>
+
+                          {/* Quantity Change */}
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-sm text-gray-600">Quantity:</span>
+                            <span className={`text-2xl font-bold ${
+                              entry.direction === 'IN' ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                              {entry.direction === 'IN' ? '+' : '-'}{entry.quantity || 0}
+                            </span>
+                          </div>
+
+                          {/* Balance Info */}
+                          <div className="flex items-center gap-6 text-sm">
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-500">Balance After:</span>
+                              <span className="font-semibold text-gray-900 text-base">
+                                {entry.balanceAfter || 0}
+                              </span>
+                            </div>
+                            {entry.balanceAfter !== undefined && entry.quantity && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-500">Balance Before:</span>
+                                <span className="font-medium text-gray-700">
+                                  {entry.direction === 'IN' 
+                                    ? (entry.balanceAfter - entry.quantity) 
+                                    : (entry.balanceAfter + entry.quantity)}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Remarks */}
+                          {entry.remarks && (
+                            <div className="pt-2 border-t border-gray-100">
+                              <p className="text-sm text-gray-600">
+                                <span className="font-medium text-gray-700">Note:</span> {entry.remarks}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Reference Info */}
+                          {entry.referenceType && (
+                            <div className="flex items-center gap-2 text-xs text-gray-500">
+                              <span className="font-medium">Type:</span>
+                              <span className="px-2 py-0.5 bg-gray-50 rounded border border-gray-200">
+                                {entry.referenceType}
+                              </span>
+                              {entry.referenceId && (
+                                <>
+                                  <span>•</span>
+                                  <span className="font-mono">{entry.referenceId.slice(-8)}</span>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Right Section - Timestamp */}
+                        <div className="text-right space-y-1 flex-shrink-0">
+                          <div className="text-xs font-medium text-gray-700">
+                            {new Date(entry.createdAt).toLocaleDateString('en-IN', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric'
+                            })}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {new Date(entry.createdAt).toLocaleTimeString('en-IN', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: true
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Pagination */}
+            {!ledgerLoading && stockLedger.length > 0 && (
+              <div className="border-t bg-gray-50 p-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-gray-600">
+                    Page <span className="font-semibold text-gray-800">{ledgerPage}</span> of <span className="font-semibold text-gray-800">{ledgerTotalPages}</span>
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleLedgerPageChange(ledgerPage - 1)}
+                      disabled={ledgerPage === 1}
+                      className="px-4 py-2 text-sm font-medium border border-gray-300 text-gray-700 bg-white rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-colors"
+                    >
+                      ← Previous
+                    </button>
+                    <button
+                      onClick={() => handleLedgerPageChange(ledgerPage + 1)}
+                      disabled={ledgerPage === ledgerTotalPages}
+                      className="px-4 py-2 text-sm font-medium border border-gray-300 text-gray-700 bg-white rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-colors"
+                    >
+                      Next →
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
