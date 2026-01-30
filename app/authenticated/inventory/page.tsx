@@ -81,6 +81,10 @@ export default function InventoryPage() {
   const [ledgerPage, setLedgerPage] = useState(1);
   const [ledgerTotalPages, setLedgerTotalPages] = useState(1);
 
+  const [showTransferHistory, setShowTransferHistory] = useState(false);
+  const [transferHistory, setTransferHistory] = useState<Transfer[]>([]);
+  const [transferHistoryLoading, setTransferHistoryLoading] = useState(false);
+
   // Form state for editing
   const [formData, setFormData] = useState({
     name: "",
@@ -192,6 +196,28 @@ export default function InventoryPage() {
     setLedgerPage(1);
   };
 
+  const fetchTransferHistory = async (productId: string) => {
+    setTransferHistoryLoading(true);
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/products/${productId}/transfer`
+      );
+      const data = await res.json();
+      setTransferHistory(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Failed to fetch transfer history:", err);
+      setTransferHistory([]);
+    } finally {
+      setTransferHistoryLoading(false);
+    }
+  };
+
+  const openTransferHistory = (product: Product) => {
+    setSelectedProduct(product);
+    setShowTransferHistory(true);
+    fetchTransferHistory(product._id);
+  };
+
   const handleLedgerPageChange = (newPage: number) => {
     if (selectedProduct && newPage >= 1 && newPage <= ledgerTotalPages) {
       fetchStockLedger(selectedProduct._id, newPage);
@@ -296,13 +322,6 @@ export default function InventoryPage() {
     e.preventDefault();
     if (!transferProduct || !transferQuantity) return;
 
-    // Find selected product to get vendor
-    const selectedProd = products.find(p => p._id === transferProduct);
-    if (!selectedProd || !selectedProd.vendor) {
-      alert("Selected product or vendor not found");
-      return;
-    }
-
     setTransferring(true);
     try {
       const token = localStorage.getItem("authToken");
@@ -311,34 +330,49 @@ export default function InventoryPage() {
         return;
       }
 
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/products/${transferProduct}/transfer`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            quantity: Number(transferQuantity),
-            requestedVendor: selectedProd.vendor._id
-          }),
+      let url = "";
+      let body: any = { quantity: Number(transferQuantity) };
+
+      if (vendor?.name === "Hshop Enterprises") {
+        url = `${process.env.NEXT_PUBLIC_API_URL}/api/products/${transferProduct}/send-stock`;
+      } else if (vendor?.name === "GK Enterprises") {
+       
+        const selectedProd = products.find(p => p._id === transferProduct);
+        if (!selectedProd || !selectedProd.vendor) {
+          alert("Selected product or vendor not found");
+          setTransferring(false);
+          return;
         }
-      );
+        url = `${process.env.NEXT_PUBLIC_API_URL}/api/products/${transferProduct}/transfer`;
+        body.requestedVendor = selectedProd.vendor._id;
+      }
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      });
 
       if (res.ok) {
-        alert("Stock transfer request created successfully");
+        const successMsg =
+          vendor?.name === "Hshop Enterprises"
+            ? "Stock transferred successfully"
+            : "Stock transfer request created successfully";
+        alert(successMsg);
         setShowTransferModal(false);
         setTransferProduct("");
         setTransferQuantity("");
         await fetchProducts();
       } else {
         const error = await res.json();
-        alert(error.message || "Failed to create transfer request");
+        alert(error.message || "Failed to transfer stock");
       }
     } catch (err) {
-      console.error("Error creating transfer:", err);
-      alert("Failed to create transfer request");
+      console.error("Error transferring stock:", err);
+      alert("Failed to transfer stock");
     } finally {
       setTransferring(false);
     }
@@ -414,7 +448,7 @@ export default function InventoryPage() {
       product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  ).sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <div className="p-4 md:p-6 bg-gray-50 min-h-screen">
@@ -428,7 +462,16 @@ export default function InventoryPage() {
         </div>
 
         <div className="flex items-center gap-3">
-         {vendor?.name === "GK Enterprises" && (
+         {vendor?.name === "Hshop Enterprises" && (
+          <button
+            onClick={() => setShowTransferModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm font-medium shadow-sm"
+          >
+            <ArrowRightLeft className="w-4 h-4" />
+            Send Stock
+          </button>
+          )}
+          {vendor?.name === "GK Enterprises" && (
           <button
             onClick={() => setShowTransferModal(true)}
             className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm font-medium shadow-sm"
@@ -651,6 +694,11 @@ export default function InventoryPage() {
                       </th>
                     )}
                     {activeTab === "our" && (
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Transfers
+                      </th>
+                    )}
+                    {activeTab === "our" && (
                       <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
                         Actions
                       </th>
@@ -752,6 +800,21 @@ export default function InventoryPage() {
                                 -
                               </span>
                             )}
+                          </td>
+                        )}
+
+                        {/* Transfer History - Only for Our Products */}
+                        {activeTab === "our" && (
+                          <td className="px-4 py-3">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openTransferHistory(product);
+                              }}
+                              className="text-xs px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors font-medium"
+                            >
+                              View
+                            </button>
                           </td>
                         )}
 
@@ -1109,7 +1172,9 @@ export default function InventoryPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="text-lg font-semibold text-gray-800">Request Stock Transfer</h2>
+              <h2 className="text-lg font-semibold text-gray-800">
+                {vendor?.name === "Hshop Enterprises" ? "Send Stock" : "Request Stock Transfer"}
+              </h2>
               <button
                 onClick={() => {
                   setShowTransferModal(false);
@@ -1134,14 +1199,22 @@ export default function InventoryPage() {
                   className="w-full px-3 py-2 border border-gray-300 text-black rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white"
                 >
                   <option value="">Select a product</option>
-                  {otherProducts.map((p) => (
-                    <option key={p._id} value={p._id}>
-                      {p.name} - {p.vendor?.name} (Stock: {p.stock})
-                    </option>
-                  ))}
+                  {vendor?.name === "Hshop Enterprises"
+                    ? ourProducts.map((p) => (
+                        <option key={p._id} value={p._id}>
+                          {p.name} (KK Stock: {p.kk_stock || 0})
+                        </option>
+                      ))
+                    : otherProducts.map((p) => (
+                        <option key={p._id} value={p._id}>
+                          {p.name} - {p.vendor?.name} (Stock: {p.stock})
+                        </option>
+                      ))}
                 </select>
                 <p className="mt-1 text-xs text-gray-500">
-                  Only products from other vendors are available for request.
+                  {vendor?.name === "Hshop Enterprises"
+                    ? "Select products from your inventory to transfer from KK Stock."
+                    : "Only products from other vendors are available for request."}
                 </p>
               </div>
 
@@ -1180,14 +1253,103 @@ export default function InventoryPage() {
                   {transferring ? (
                     <span className="flex items-center justify-center gap-2">
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Requesting...
+                      {vendor?.name === "Hshop Enterprises" ? "Sending..." : "Requesting..."}
                     </span>
                   ) : (
-                    "Submit Request"
+                    vendor?.name === "Hshop Enterprises" ? "Send Stock" : "Submit Request"
                   )}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Transfer History Modal */}
+      {showTransferHistory && selectedProduct && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white w-full max-w-3xl rounded-xl shadow-xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-800">
+                  Transfer History
+                </h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  {selectedProduct.name}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowTransferHistory(false)}
+                className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="p-4">
+              {transferHistoryLoading ? (
+                <div className="flex items-center justify-center h-64">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
+                </div>
+              ) : transferHistory.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+                  <Package className="w-16 h-16 mb-4 text-gray-300" />
+                  <p className="text-lg font-medium">No transfer history found</p>
+                  <p className="text-sm">This product has no transfers yet</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200 bg-gray-50">
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Quantity</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Requested By</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Requested Vendor</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {transferHistory.map((transfer) => (
+                        <tr key={transfer._id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-gray-700">
+                            {new Date(transfer.requestedAt).toLocaleDateString()}
+                          </td>
+                          <td className="px-4 py-3 font-semibold text-teal-600">
+                            {transfer.quantity}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`text-xs px-2 py-1 rounded-full capitalize font-medium ${
+                              transfer.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                              transfer.status === 'approved' ? 'bg-green-100 text-green-700' :
+                              transfer.status === 'delivered' ? 'bg-blue-100 text-blue-700' :
+                              'bg-red-100 text-red-700'
+                            }`}>
+                              {transfer.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-gray-700">
+                            {transfer.requestedBy?.name || "-"}
+                          </td>
+                          <td className="px-4 py-3 text-gray-700">
+                            {transfer.requestedVendor?.name || "-"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 p-4 border-t sticky bottom-0 bg-white">
+              <button
+                onClick={() => setShowTransferHistory(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
